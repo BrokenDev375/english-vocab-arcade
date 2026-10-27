@@ -31,6 +31,12 @@ jobs:
       - name: Run Handoff Contract Checks
         run: node scripts/check-handoff.mjs
 
+      - name: Verify Dashboard SQL bundle
+        run: |
+          node --test scripts/build-supabase-dashboard.test.mjs
+          node scripts/build-supabase-dashboard.mjs
+          git diff --exit-code -- supabase/manual/english-vocab-arcade.sql
+
       - name: Install Web Dependencies
         working-directory: ./web
         run: npm ci

@@ -141,8 +141,37 @@ describe("T02 - Schema core và RLS (D01-D04, D12, D14, D15)", () => {
     expect(privSets?.length).toBe(0);
 
     // Check profiles cannot be queried by anon (strict privacy on explore)
-    const { data: profiles } = await anonClient.from("profiles").select("id, display_name");
-    expect(profiles?.length).toBe(0);
+    const { data: profiles, error: profilesError } = await anonClient.from("profiles").select("id, display_name");
+    expect(profiles).toBeNull();
+    expect(profilesError?.code).toBe("42501");
+  });
+
+  it("Session RPC denies anonymous and other-user writes while allowing owner and service role", async () => {
+    const { data: session, error: createError } = await adminClient.from("study_sessions").insert({
+      user_id: userAId, set_id: privateSetAId, mode: "learn", seed: "grants-regression",
+      content_revision: 1, content_snapshot: [], ordered_card_ids: [privateCardAId],
+    }).select("id").single();
+    expect(createError).toBeNull();
+    const args = { p_session_id: session!.id, p_expected_version: 1, p_state: { score: 1 }, p_active_elapsed_ms: 100 };
+    try {
+      const anonymous = await anonClient.rpc("save_session_state_v1", args);
+      expect(anonymous.data).toBeNull();
+      expect(anonymous.error?.code).toBe("42501");
+
+      const otherUser = await clientB.rpc("save_session_state_v1", args);
+      expect(otherUser.error).toBeNull();
+      expect(otherUser.data).toMatchObject({ success: false, code: "FORBIDDEN" });
+
+      const owner = await clientA.rpc("save_session_state_v1", args);
+      expect(owner.error).toBeNull();
+      expect(owner.data).toMatchObject({ success: true, new_version: 2 });
+
+      const service = await adminClient.rpc("save_session_state_v1", { ...args, p_expected_version: 2 });
+      expect(service.error).toBeNull();
+      expect(service.data).toMatchObject({ success: true, new_version: 3 });
+    } finally {
+      await adminClient.from("study_sessions").delete().eq("id", session!.id);
+    }
   });
 
   // D02: B query private A bằng UUID trực tiếp -> Không đọc được row/nested cards

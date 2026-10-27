@@ -9,12 +9,13 @@ Cập nhật ban đầu: 26/10/2026.
 ## Hiện trạng đã xác minh — cập nhật 27/10/2026
 
 - [x] Kế hoạch, đặc tả và runbook bàn giao.
-- [x] Repository Git local và origin cấu hình; baseline abb35fa.
-- [x] 5 migrations áp dụng vào Supabase local, không reset và không sửa migration cũ.
-- [x] Lint/TypeScript, 114 unit, 46 integration, build và 15 browser E2E PASS.
+- [x] Bản sửa F01–F08 đã push origin/main: `1f1357d7114cc564a351051f16f297e3b0dc67d6`.
+- [x] 6 migrations áp dụng vào Supabase local; migration cũ giữ nguyên, không reset.
+- [x] Bản 1f1357d: lint/TypeScript, 114 unit, 46 integration, build và 15 browser E2E PASS. Sau migration 0006: 47 integration và TypeScript PASS.
 - [x] Sửa F01–F08; xem [nghiệm thu](../reports/fix-verification-20261027.md) và [evidence](../reports/fix-verification-20261027-evidence.json).
-- [ ] Xác minh GitHub Actions remote sau push.
-- [ ] Supabase/Vercel production và smoke trên URL thật.
+- [x] [GitHub Actions của 1f1357d](https://github.com/BrokenDev375/english-vocab-arcade/actions/runs/40515481988) success; Vercel deployment success, `/api/health` trả đúng build SHA.
+- [x] Bộ SQL Editor cài đủ 6 migrations đã thử trên database tạm: cài mới, chạy lại, grants, backfill và guard PASS. Xem [hướng dẫn](../supabase/manual/README.md).
+- [ ] Production `/api/sets` đang trả 500: thiếu `public.learning_sets` trong schema cache. Chưa chạy SQL lên Supabase production.
 - [ ] Provider Gemini thật, thiết bị âm thanh/mobile thật, học liệu public beta >=300 thẻ và duyệt độc lập.
 
 Các log phía dưới là lịch sử. Kiểm thử local không thay thế các bằng chứng production.
@@ -42,25 +43,25 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | T16 | DONE | English exercises (grammar unscramble, reading comprehension, contextual translation), zero HSK/pinyin, acceptedTokenOrders & reference matching; 4 unit tests + 34 routes compiled |
 | T17 | DONE | Speech adapter (TTS 1.0x/0.75x, Web Speech STT, token grading, substring rejection, keyboard fallback), /dictation and /speak routes; 6 unit tests + 36 routes compiled |
 | T18 | UNVERIFIED | 32 cards for internal smoke tests only; public beta requires >=300 cards and independent content review. Metadata/hash tests do not verify linguistic accuracy. |
-| T19 | UNVERIFIED | Local gates PASS: 114 unit, 46 integration, 15 browser E2E, build, scanner; CI workflow updated. GitHub Actions remote not executed in this fix. |
-| T20 | BLOCKED | Production Supabase project/link/db push not verified; all 5 migrations tested locally. No remote reset or migration performed. |
-| T21 | DOING | User requested GitHub push to origin/main on 27/10/2026; local verification complete. Vercel deployment/Ready remains UNVERIFIED. |
-| T22 | UNVERIFIED | Chờ deploy URL production để thực hiện smoke test thực tế; release checklist đã lập tại reports/release-v1.md |
+| T19 | DOING | CI 1f1357d success; local 114 unit, 47 integration, build, scanner và browser checks có bằng chứng. Bộ SQL Editor bổ sung đã kiểm tra riêng; CI của commit tiếp theo cần xác minh sau push. |
+| T20 | DOING | Project qtqvytchmlqojolkobmw xác định từ public client bundle. 6 migrations local PASS; SQL Editor bundle chuẩn bị và kiểm thử xong. Chờ chạy file trên Dashboard; chưa thay đổi production. |
+| T21 | DOING | Origin/main 1f1357d đã push, Vercel deployment success, health 200 đúng SHA tại english-vocab-arcade.vercel.app. Website chưa hoàn thành do Data API lỗi schema; Auth/AI cần smoke thực tế. |
+| T22 | DOING | Smoke read-only production: health 200, auth/user 200, sets explore 500. Chờ hoàn tất schema rồi kiểm tra luồng Auth/CRUD/học/AI. |
 
 Status hợp lệ: TODO, DOING, DONE, BLOCKED, UNVERIFIED.
 Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi điều kiện thiếu và việc độc lập còn làm được.
 
 ## Thông tin triển khai
 
-- Source baseline: abb35fa (branch main) + working-tree fixes verified 27/10/2026; not committed/pushed in this fix.
-- GitHub repository mới: Chờ chủ dự án tạo repo english-vocab-arcade
-- Supabase project ref mới: Chờ chủ dự án cấp (Local stack: 127.0.0.1:54321)
-- Supabase production URL: Chờ cấu hình
-- Vercel project/team: Chờ import (Root: web)
-- Production stable URL: Chờ cấu hình
-- Deployment commit/build SHA: fbe8f67 (đối chiếu qua /api/health buildSha)
-- Last production smoke: NOT RUN (Chờ live URL)
-- Gemini model verified: gemini-2.5-flash (fallback gemini-1.5-flash, reports/provider-check.md)
+- Source deployed: 1f1357d7114cc564a351051f16f297e3b0dc67d6 (main); bộ SQL Editor/migration 0006 là phần bổ sung tiếp theo.
+- GitHub repository: https://github.com/BrokenDev375/english-vocab-arcade
+- Supabase project ref: qtqvytchmlqojolkobmw (Local stack: 127.0.0.1:54321)
+- Supabase production URL: https://qtqvytchmlqojolkobmw.supabase.co
+- Vercel project/team: thanh-djts-projects/english-vocab-arcade (Root: web)
+- Production stable URL: https://english-vocab-arcade.vercel.app
+- Deployment commit/build SHA: 1f1357d7114cc564a351051f16f297e3b0dc67d6 (health 200)
+- Last production smoke: 27/10/2026, chỉ read-only; sets explore 500 vì schema cache không có learning_sets.
+- Gemini provider thật trên production: UNVERIFIED. Fallback chỉ dùng khi cấu hình rõ; báo cáo provider cũ không chứng minh provider hoạt động ở deployment hiện tại.
 - Dataset internal/smoke count: 32 thẻ; kiểm duyệt ngôn ngữ độc lập và bộ public beta >=300 thẻ chưa xác minh.
 
 ## Nhật ký lượt triển khai
