@@ -1,0 +1,177 @@
+{
+  "schemaVersion": 1,
+  "metadata": {
+    "title": "Handoff examples — review before publishing",
+    "source": "Original examples prepared for this project",
+    "license": "CC0-1.0",
+    "reviewStatus": "draft",
+    "reviewer": null,
+    "createdOn": "2026-10-26",
+    "notes": "Ten structural examples only; level, IPA and translations require editorial review. owner_id must be supplied by the seed operator."
+  },
+  "sets": [
+    {
+      "id": "550e8400-e29b-41d4-a716-446655440000",
+      "title": "Everyday English — sample",
+      "description": "Mẫu cấu trúc dữ liệu, chưa phải bộ học liệu beta đã duyệt.",
+      "language": "en",
+      "cefrLevel": "mixed",
+      "topic": "daily-life",
+      "isPublic": false,
+      "cards": [
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440001",
+          "term": "brave",
+          "meaningVi": "dũng cảm",
+          "partOfSpeech": "adjective",
+          "ipa": "/breɪv/",
+          "cefrLevel": "A2",
+          "exampleEn": "The brave girl helped the lost child.",
+          "exampleVi": "Cô bé dũng cảm đã giúp đứa trẻ bị lạc.",
+          "acceptedAnswers": [
+            "brave"
+          ],
+          "position": 0,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440002",
+          "term": "apple",
+          "meaningVi": "quả táo",
+          "partOfSpeech": "noun",
+          "ipa": "/ˈæp.əl/",
+          "cefrLevel": "A1",
+          "exampleEn": "I eat an apple after lunch.",
+          "exampleVi": "Tôi ăn một quả táo sau bữa trưa.",
+          "acceptedAnswers": [
+            "apple"
+          ],
+          "position": 1,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440003",
+          "term": "borrow",
+          "meaningVi": "mượn",
+          "partOfSpeech": "verb",
+          "ipa": "/ˈbɒr.əʊ/",
+          "cefrLevel": "A2",
+          "exampleEn": "Can I borrow your pen?",
+          "exampleVi": "Tôi có thể mượn bút của bạn không?",
+          "acceptedAnswers": [
+            "borrow"
+          ],
+          "position": 2,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440004",
+          "term": "carefully",
+          "meaningVi": "một cách cẩn thận",
+          "partOfSpeech": "adverb",
+          "ipa": "/ˈkeə.fəl.i/",
+          "cefrLevel": "A2",
+          "exampleEn": "Please read the question carefully.",
+          "exampleVi": "Hãy đọc câu hỏi một cách cẩn thận.",
+          "acceptedAnswers": [
+            "carefully"
+          ],
+          "position": 3,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440005",
+          "term": "colour",
+          "meaningVi": "màu sắc",
+          "partOfSpeech": "noun",
+          "ipa": "/ˈkʌl.ər/",
+          "cefrLevel": "A1",
+          "exampleEn": "What is your favourite colour?",
+          "exampleVi": "Màu yêu thích của bạn là gì?",
+          "acceptedAnswers": [
+            "colour",
+            "color"
+          ],
+          "position": 4,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440006",
+          "term": "ice cream",
+          "meaningVi": "kem",
+          "partOfSpeech": "noun",
+          "ipa": "/ˌaɪs ˈkriːm/",
+          "cefrLevel": "A1",
+          "exampleEn": "We bought ice cream at the shop.",
+          "exampleVi": "Chúng tôi đã mua kem ở cửa hàng.",
+          "acceptedAnswers": [
+            "ice cream"
+          ],
+          "position": 5,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440007",
+          "term": "don't",
+          "meaningVi": "không; dạng rút gọn của do not",
+          "partOfSpeech": "phrase",
+          "ipa": null,
+          "cefrLevel": "A1",
+          "exampleEn": "Don't open the door.",
+          "exampleVi": "Đừng mở cửa.",
+          "acceptedAnswers": [
+            "don't",
+            "do not"
+          ],
+          "position": 6,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440008",
+          "term": "arrive",
+          "meaningVi": "đến nơi",
+          "partOfSpeech": "verb",
+          "ipa": "/əˈraɪv/",
+          "cefrLevel": "A2",
+          "exampleEn": "We will arrive before dinner.",
+          "exampleVi": "Chúng tôi sẽ đến nơi trước bữa tối.",
+          "acceptedAnswers": [
+            "arrive"
+          ],
+          "position": 7,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440009",
+          "term": "improve",
+          "meaningVi": "cải thiện",
+          "partOfSpeech": "verb",
+          "ipa": "/ɪmˈpruːv/",
+          "cefrLevel": "A2",
+          "exampleEn": "I want to improve my English.",
+          "exampleVi": "Tôi muốn cải thiện tiếng Anh của mình.",
+          "acceptedAnswers": [
+            "improve"
+          ],
+          "position": 8,
+          "reviewStatus": "draft"
+        },
+        {
+          "id": "550e8400-e29b-41d4-a716-446655440010",
+          "term": "environment",
+          "meaningVi": "môi trường",
+          "partOfSpeech": "noun",
+          "ipa": "/ɪnˈvaɪ.rən.mənt/",
+          "cefrLevel": "B1",
+          "exampleEn": "We can help protect the environment.",
+          "exampleVi": "Chúng ta có thể góp phần bảo vệ môi trường.",
+          "acceptedAnswers": [
+            "environment"
+          ],
+          "position": 9,
+          "reviewStatus": "draft"
+        }
+      ]
+    }
+  ]
+}

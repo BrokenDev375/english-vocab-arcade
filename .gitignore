@@ -1,0 +1,32 @@
+# Secrets
+.env
+.env.*
+!.env.example
+!**/.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Dependencies/build/runtime artifacts
+node_modules/
+**/node_modules/
+.next/
+**/.next/
+.vercel/
+**/.vercel/
+out/
+coverage/
+**/coverage/
+playwright-report/
+test-results/
+*.tsbuildinfo
+supabase/.temp/
+supabase/.branches/
+
+# Private operational artifacts
+*.log
+*.dump
+*.backup
+.envrc
+.DS_Store
+Thumbs.db

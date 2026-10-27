@@ -1,0 +1,60 @@
+name: CI Quality Gate & Security Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  audit-and-test:
+    name: Lint, Test Matrix & Security Audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js 24.x
+        uses: actions/setup-node@v4
+        with:
+          node-version: 24.x
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Secret Scanning Audit
+        run: |
+          echo "Scanning for exposed private keys or tokens..."
+          # Reject committed real private keys or Supabase secrets
+          ! grep -rE "AIzaSy[A-Za-z0-9_-]{33}" --exclude-dir={node_modules,.next,.git} . || (echo "ERROR: Gemini API key detected in source!" && exit 1)
+
+      - name: Run Handoff Contract Checks
+        run: node scripts/check-handoff.mjs
+
+      - name: Install Web Dependencies
+        working-directory: ./web
+        run: npm ci
+
+      - name: Run ESLint
+        working-directory: ./web
+        run: npm run lint
+
+      - name: Run TypeScript Typecheck
+        working-directory: ./web
+        run: npm run typecheck
+
+      - name: Run Unit Test Suite
+        working-directory: ./web
+        env:
+          CI: true
+          AI_ENABLED: false
+        run: npm run test
+
+      - name: Build Next.js Production Bundle
+        working-directory: ./web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+          CI: true
+        run: npm run build
