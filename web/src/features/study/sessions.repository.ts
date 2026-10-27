@@ -79,28 +79,68 @@ export async function createOrResumeSession(
       .in("status", ["active", "paused"]);
   }
 
-  // 3. Fetch set metadata and cards to build session snapshot
+  // 3. Fetch set metadata and verify visibility
   const { data: setRow, error: setError } = await adminClient
     .from("learning_sets")
-    .select("id, content_revision")
+    .select("id, owner_id, is_public, content_revision")
     .eq("id", setId)
-    .single();
+    .maybeSingle();
 
   if (setError || !setRow) {
-    throw new Error("Learning set not found");
+    throw new Error("NOT_FOUND: Learning set not found");
   }
 
-  const { data: cardsRows, error: cardsError } = await adminClient
-    .from("vocabulary_cards")
-    .select("id, term, meaning_vi, part_of_speech, accepted_answers, ipa, position")
-    .eq("set_id", setId)
-    .order("position", { ascending: true });
-
-  if (cardsError || !cardsRows) {
-    throw new Error("Could not load set cards for session");
+  // Enforce visibility: only owner or public sets can have study sessions created
+  if (!setRow.is_public && setRow.owner_id !== userId) {
+    throw new Error("NOT_FOUND: Learning set not found or private");
   }
 
-  const orderedCardIds = cardsRows.map((c) => c.id);
+  // Fetch all cards with pagination loop to support sets > 1,000 cards
+  const allCards: Array<{
+    id: string;
+    term: string;
+    meaning_vi: string;
+    part_of_speech: string;
+    accepted_answers: string[] | null;
+    ipa: string | null;
+    position: number;
+  }> = [];
+
+  let from = 0;
+  const CHUNK_SIZE = 1000;
+  while (true) {
+    const { data: chunk, error: cardsError } = await adminClient
+      .from("vocabulary_cards")
+      .select("id, term, meaning_vi, part_of_speech, accepted_answers, ipa, position")
+      .eq("set_id", setId)
+      .order("position", { ascending: true })
+      .range(from, from + CHUNK_SIZE - 1);
+
+    if (cardsError) {
+      throw new Error("Could not load set cards for session: " + cardsError.message);
+    }
+    if (!chunk || chunk.length === 0) break;
+    const mappedChunk = chunk.map((c) => ({
+      id: c.id,
+      term: c.term,
+      meaning_vi: c.meaning_vi,
+      part_of_speech: c.part_of_speech,
+      accepted_answers: Array.isArray(c.accepted_answers)
+        ? (c.accepted_answers as string[])
+        : [c.term],
+      ipa: c.ipa,
+      position: c.position,
+    }));
+    allCards.push(...mappedChunk);
+    if (chunk.length < CHUNK_SIZE) break;
+    from += CHUNK_SIZE;
+  }
+
+  if (allCards.length === 0) {
+    throw new Error("EMPTY_SET: Không thể tạo phiên học cho bộ từ vựng không có thẻ");
+  }
+
+  const orderedCardIds = allCards.map((c) => c.id);
   const seed = `${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
 
   // 4. Insert new session
@@ -111,7 +151,7 @@ export async function createOrResumeSession(
       set_id: setId,
       mode,
       content_revision: setRow.content_revision,
-      content_snapshot: cardsRows as unknown as NonNullable<import("@/types/database.generated").Json>,
+      content_snapshot: allCards as unknown as NonNullable<import("@/types/database.generated").Json>,
       ordered_card_ids: orderedCardIds,
       seed,
       state: { settings, stageIndex: 0 } as unknown as NonNullable<import("@/types/database.generated").Json>,
@@ -242,7 +282,7 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
   // 1. Fetch session snapshot to grade server-side
   const { data: session } = await adminClient
     .from("study_sessions")
-    .select("user_id, content_snapshot, state_version")
+    .select("user_id, status, mode, content_snapshot, state_version")
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -250,7 +290,34 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
     return { success: false, code: "FORBIDDEN", error: "Session access denied" };
   }
 
-  // 2. Server-side grading against snapshot
+  if (session.status === "completed" || session.status === "abandoned") {
+    return {
+      success: false,
+      code: "SESSION_TERMINATED",
+      error: "Phiên học đã kết thúc hoặc bị hủy",
+    };
+  }
+
+  // 2. Validate card membership in session snapshot (R06 fix)
+  interface SnapshotCard {
+    id: string;
+    term: string;
+    accepted_answers?: string[] | null;
+  }
+  const cards = (Array.isArray(session.content_snapshot)
+    ? session.content_snapshot
+    : (session.content_snapshot as unknown as { cards?: SnapshotCard[] })?.cards || []) as SnapshotCard[];
+  const targetCard = cards.find((c) => c.id === cardId);
+
+  if (!targetCard) {
+    return {
+      success: false,
+      code: "INVALID_CARD_MEMBERSHIP",
+      error: "Thẻ không thuộc danh sách thẻ của phiên học",
+    };
+  }
+
+  // 3. Server-side grading against snapshot
   let isCorrect = false;
   let gradeSource = "rule";
 
@@ -258,29 +325,44 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
     isCorrect = userAnswer === "remembered";
     gradeSource = "self_rating";
   } else if (attemptKind === "game_hit") {
+    if (session.mode !== "arcade_typing" && session.mode !== "arcade_recall") {
+      return {
+        success: false,
+        code: "INVALID_ATTEMPT_KIND",
+        error: "Chỉ chế độ arcade mới chấp nhận game_hit",
+      };
+    }
+    const cleanUser = userAnswer.trim().toLowerCase();
+    const matchesTerm = cleanUser === targetCard.term.trim().toLowerCase();
+    const matchesAccepted = (targetCard.accepted_answers || []).some(
+      (ans) => ans.trim().toLowerCase() === cleanUser
+    );
+    if (!matchesTerm && !matchesAccepted) {
+      return {
+        success: false,
+        code: "INVALID_ANSWER",
+        error: "Đáp án bắn mục tiêu không khớp từ mục tiêu",
+      };
+    }
     isCorrect = true;
     gradeSource = "rule";
   } else if (attemptKind === "game_miss") {
+    if (session.mode !== "arcade_typing" && session.mode !== "arcade_recall") {
+      return {
+        success: false,
+        code: "INVALID_ATTEMPT_KIND",
+        error: "Chỉ chế độ arcade mới chấp nhận game_miss",
+      };
+    }
     isCorrect = false;
     gradeSource = "rule";
   } else {
-    // Normal answer grading against snapshot card accepted answers
-    interface SnapshotCard {
-      id: string;
-      term: string;
-      accepted_answers?: string[];
-    }
-    const cards = (session.content_snapshot || []) as unknown as SnapshotCard[];
-    const targetCard = cards.find((c) => c.id === cardId);
-
-    if (targetCard) {
-      isCorrect = isAnswerCorrect(
-        userAnswer,
-        targetCard.term,
-        targetCard.accepted_answers || [targetCard.term]
-      );
-      gradeSource = "rule";
-    }
+    isCorrect = isAnswerCorrect(
+      userAnswer,
+      targetCard.term,
+      targetCard.accepted_answers || [targetCard.term]
+    );
+    gradeSource = "rule";
   }
 
   // 3. Call record_attempt_v1 RPC

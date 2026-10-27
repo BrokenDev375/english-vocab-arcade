@@ -253,36 +253,74 @@ ${JSON.stringify(cardsData, null, 2)}`;
 }
 
 /**
- * Validates and maps response to appropriate Zod schema.
+ * Validates and maps response to appropriate Zod schema with full coverage enforcement.
  */
 function validateModeOutput(mode: AiMode, json: unknown, expectedCardIds: string[]) {
   const expectedSet = new Set(expectedCardIds);
 
   if (mode === "context") {
     const parsed = ContextOutputSchema.parse(json);
+    const seen = new Set<string>();
     for (const item of parsed.items) {
       if (!expectedSet.has(item.cardId)) {
         throw new Error(`Output contains unexpected cardId: ${item.cardId}`);
       }
+      if (seen.has(item.cardId)) {
+        throw new Error(`Output contains duplicate cardId: ${item.cardId}`);
+      }
+      seen.add(item.cardId);
+    }
+    if (seen.size !== expectedCardIds.length) {
+      throw new Error(`Output incomplete: expected ${expectedCardIds.length} cards, received ${seen.size}`);
     }
     return parsed;
   } else if (mode === "grammar") {
     const parsed = GrammarOutputSchema.parse(json);
+    const seen = new Set<string>();
     for (const ex of parsed.exercises) {
       if (!expectedSet.has(ex.cardId)) {
         throw new Error(`Output contains unexpected cardId: ${ex.cardId}`);
       }
+      if (seen.has(ex.cardId)) {
+        throw new Error(`Output contains duplicate cardId: ${ex.cardId}`);
+      }
+      seen.add(ex.cardId);
+    }
+    if (seen.size !== expectedCardIds.length) {
+      throw new Error(`Output incomplete: expected ${expectedCardIds.length} cards, received ${seen.size}`);
     }
     return parsed;
   } else if (mode === "reading") {
     const parsed = ReadingOutputSchema.parse(json);
+    if (!parsed.usedCardIds || parsed.usedCardIds.length === 0) {
+      throw new Error("Reading output usedCardIds must not be empty");
+    }
+    for (const cardId of parsed.usedCardIds) {
+      if (!expectedSet.has(cardId)) {
+        throw new Error(`Reading output contains unknown cardId: ${cardId}`);
+      }
+    }
+    for (const q of parsed.questions) {
+      const distinctOptions = new Set(q.options.map((o) => o.trim().toLowerCase()));
+      if (distinctOptions.size !== 4) {
+        throw new Error(`Reading question ${q.id} has duplicate options`);
+      }
+    }
     return parsed;
   } else {
     const parsed = TranslationOutputSchema.parse(json);
+    const seen = new Set<string>();
     for (const ex of parsed.exercises) {
       if (!expectedSet.has(ex.cardId)) {
         throw new Error(`Output contains unexpected cardId: ${ex.cardId}`);
       }
+      if (seen.has(ex.cardId)) {
+        throw new Error(`Output contains duplicate cardId: ${ex.cardId}`);
+      }
+      seen.add(ex.cardId);
+    }
+    if (seen.size !== expectedCardIds.length) {
+      throw new Error(`Output incomplete: expected ${expectedCardIds.length} cards, received ${seen.size}`);
     }
     return parsed;
   }
@@ -312,6 +350,15 @@ export async function generateAiBatchContent(
   const targetLevel = options.targetLevel || "A2";
   const timeoutBudgetMs = options.timeoutBudgetMs || 20000;
 
+  // Kill-switch: check if AI feature is globally enabled (R09 fix)
+  if (!env.AI_ENABLED && !options.injectedProvider) {
+    return {
+      success: false,
+      errorCode: "AI_DISABLED",
+      error: "Tính năng AI đang tạm thời bị vô hiệu hóa bởi quản trị viên",
+    };
+  }
+
   // 1. Resolve Provider
   let provider = options.injectedProvider;
   if (!provider) {
@@ -326,7 +373,7 @@ export async function generateAiBatchContent(
   }
 
   const primaryModel = env.GEMINI_MODEL_PRIMARY || "gemini-2.5-flash";
-  const fallbackModel = "gemini-1.5-flash";
+  const fallbackModel = env.GEMINI_MODEL_FALLBACK || "gemini-1.5-flash";
   const expectedCardIds = cards.map((c) => c.id);
 
   const { systemInstruction, prompt, jsonSchema } = buildPromptAndSchema(
@@ -409,6 +456,14 @@ export async function generateAiBatchContent(
         lastErrorCode = "RATE_LIMITED";
       } else if (message.includes("abort") || message.includes("timeout")) {
         lastErrorCode = "PROVIDER_TIMEOUT";
+      } else if (
+        message.includes("json") ||
+        message.includes("output") ||
+        message.includes("reading") ||
+        message.includes("invalid") ||
+        message.includes("expected")
+      ) {
+        lastErrorCode = "PARSE_ERROR";
       } else {
         lastErrorCode = "PROVIDER_ERROR";
       }

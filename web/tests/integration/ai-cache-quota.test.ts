@@ -245,4 +245,22 @@ describe("T15 Integration Tests - Persistent AI Cache & Quota (E07, D11)", () =>
     // Provider calls should only have been 2 (stopped before calling provider on 3rd attempt)
     expect(providerCalls).toBe(2);
   });
+
+  it("R07 Integrity: Does not report ready if finalization fails", async () => {
+    // Call finalize directly with invalid lease token to simulate stolen/expired lease
+    const fakeBatchId = "00000000-0000-0000-0000-000000000001";
+    const fakeLease = "00000000-0000-0000-0000-000000000002";
+
+    const { data: finalizeRes } = await adminClient.rpc("finalize_ai_batch_v1", {
+      p_batch_id: fakeBatchId,
+      p_lease_token: fakeLease,
+      p_status: "ready",
+      p_output: {},
+      p_model_id: "gemini-2.5-flash",
+    });
+
+    const res = finalizeRes as { success: boolean; code?: string };
+    expect(res.success).toBe(false);
+    expect(res.code).toBe("NOT_FOUND");
+  });
 });

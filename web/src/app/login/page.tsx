@@ -88,6 +88,15 @@ function LoginForm() {
           required
         />
 
+        <div className="flex justify-end">
+          <Link
+            href="/forgot-password"
+            className="text-xs text-zinc-500 hover:text-teal-600 dark:hover:text-teal-400 transition-colors"
+          >
+            Quên mật khẩu?
+          </Link>
+        </div>
+
         {error && (
           <p className="text-xs text-rose-500 font-medium" role="alert">
             {error}

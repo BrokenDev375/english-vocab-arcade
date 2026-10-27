@@ -1,0 +1,104 @@
+{
+  "reviewDate": "2026-10-27",
+  "sourceCommit": "7fd8a1244bfd06693398c8b4bfbc30fb7f1c2fc2",
+  "checks": {
+    "handoff": "PASS (42 files before adding review)",
+    "lint": "PASS",
+    "typecheck": "PASS --incremental false",
+    "unit": {
+      "passed": 97,
+      "files": 12
+    },
+    "integration": {
+      "passed": 38,
+      "files": 9,
+      "target": "local Supabase 127.0.0.1:54321"
+    },
+    "build": "PASS, Next 16.4.3, generated pages 36/36",
+    "browserE2E": "NOT RUN",
+    "realGeminiCalls": 0
+  },
+  "httpAndSchemaProbes": [
+    {
+      "test": "RLS baseline: B reads private A directly",
+      "visibleRows": 0,
+      "expected": 0
+    },
+    {
+      "test": "HTTP private set access via sessions",
+      "ordinaryGetStatus": 404,
+      "sessionPostStatus": 201,
+      "leakedPrivateCard": true
+    },
+    {
+      "test": "HTTP game_hit for card outside own session snapshot",
+      "status": 200,
+      "returnedIsCorrect": true,
+      "progressCreated": true,
+      "correctCount": 1
+    },
+    {
+      "test": "Real set detail page",
+      "status": 200,
+      "containsOwnSetTitle": false,
+      "containsFirstDemoSetTitle": true
+    },
+    {
+      "test": "Missing planned route",
+      "route": "/forgot-password",
+      "status": 404
+    },
+    {
+      "test": "Missing planned route",
+      "route": "/reset-password",
+      "status": 404
+    },
+    {
+      "test": "Missing planned route",
+      "route": "/auth/confirm",
+      "status": 404
+    },
+    {
+      "test": "Missing planned route",
+      "route": "/auth/callback",
+      "status": 404
+    },
+    {
+      "test": "AI incomplete response validation",
+      "requestedCards": 2,
+      "returnedCards": 1,
+      "reportedSuccess": true
+    },
+    {
+      "test": "AI reading hallucinated card validation",
+      "reportedSuccess": true
+    }
+  ],
+  "isolatedFailureProbes": [
+    {
+      "test": "Local history after user logout cleanup",
+      "remainingKeys": [
+        "eva_study_attempts_audit-local-session",
+        "eva_study_progress_audit-shared-set"
+      ],
+      "remainingAttemptCount": 1
+    },
+    {
+      "test": "AI persistence finalization rejected",
+      "finalizeWasCalled": true,
+      "mockFinalizationResult": "INVALID_LEASE",
+      "repositoryReportedStatus": "ready",
+      "mockProviderCalls": 1,
+      "realProviderCalls": 0
+    }
+  ],
+  "cleanup": {
+    "fixtureUsersCreated": 2,
+    "fixtureUsersDeleted": 2,
+    "deletionErrorsReported": false,
+    "serverPort": 3197,
+    "portListenersAfterCleanup": 0,
+    "auditServerProcessesAfterCleanup": 0,
+    "note": "Verified separately with elevated Get-NetTCPConnection and Get-CimInstance. Initial harness exitCode flag stayed null after SIGTERM and was not a reliable stopped indicator."
+  }
+}

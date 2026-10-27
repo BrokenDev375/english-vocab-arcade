@@ -211,13 +211,24 @@ export async function getOrCreateAiBatch(
 
     if (genResult.success) {
       // Finalize batch as ready
-      await adminClient.rpc("finalize_ai_batch_v1", {
+      const { data: finalizeData, error: finalizeError } = await adminClient.rpc("finalize_ai_batch_v1", {
         p_batch_id: batchId,
         p_lease_token: leaseToken,
         p_status: "ready",
         p_output: genResult.data as import("@/types/database.generated").Json,
         p_model_id: genResult.modelId || "gemini-2.5-flash",
       });
+
+      const finalizeRes = finalizeData as { success?: boolean; code?: string; error?: string } | null;
+
+      if (finalizeError || !finalizeRes || !finalizeRes.success) {
+        return {
+          status: "failed",
+          batchId,
+          code: finalizeRes?.code || "FINALIZE_FAILED",
+          error: finalizeError?.message || finalizeRes?.error || "Không thể lưu kết quả AI vào bộ đệm",
+        };
+      }
 
       return {
         status: "ready",

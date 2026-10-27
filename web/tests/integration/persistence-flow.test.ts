@@ -213,6 +213,103 @@ describe("T12 Integration Tests - Persistence & Anti-Duplication (E06, D08-D10)"
     expect(cardProgress?.correct_count).toBe(1);
   });
 
+  it("R01 Security: User B cannot create a session for User A's private set", async () => {
+    await expect(
+      createOrResumeSession({
+        userId: userBId,
+        setId: setAId, // Private set belonging to User A
+        mode: "learn",
+        action: "resume_or_create",
+      })
+    ).rejects.toThrow("NOT_FOUND");
+  });
+
+  it("R06 Integrity: Rejects attempts with foreign card outside session snapshot", async () => {
+    // 1. User A creates a valid session
+    const { session } = await createOrResumeSession({
+      userId: userAId,
+      setId: setAId,
+      mode: "arcade_typing",
+      action: "restart",
+    });
+
+    // 2. Submit an attempt with a fake/foreign card ID
+    const foreignCardId = "00000000-0000-0000-0000-000000000999";
+    const res = await recordServerAttempt({
+      userId: userAId,
+      sessionId: session.id,
+      cardId: foreignCardId,
+      clientEventId: generateClientEventId(),
+      questionKey: `test:${foreignCardId}:1`,
+      attemptKind: "game_hit",
+      userAnswer: "random",
+      activeElapsedMs: 1000,
+      expectedVersion: session.state_version,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.code).toBe("INVALID_CARD_MEMBERSHIP");
+  });
+
+  it("R06 Integrity: Rejects game_hit if answer does not match card term", async () => {
+    const { session } = await createOrResumeSession({
+      userId: userAId,
+      setId: setAId,
+      mode: "arcade_typing",
+      action: "resume_or_create",
+    });
+
+    const res = await recordServerAttempt({
+      userId: userAId,
+      sessionId: session.id,
+      cardId: cardAId,
+      clientEventId: generateClientEventId(),
+      questionKey: `arcade:${cardAId}:1`,
+      attemptKind: "game_hit",
+      userAnswer: "completely_wrong_answer",
+      activeElapsedMs: 1500,
+      expectedVersion: session.state_version,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.code).toBe("INVALID_ANSWER");
+  });
+
+  it("R06 Integrity: Rejects attempts on completed sessions", async () => {
+    const { session } = await createOrResumeSession({
+      userId: userAId,
+      setId: setAId,
+      mode: "learn",
+      action: "restart",
+    });
+
+    // Mark session as completed
+    const updateRes = await updateSessionState(
+      userAId,
+      session.id,
+      session.state_version,
+      {},
+      5000,
+      "completed"
+    );
+    expect(updateRes.success).toBe(true);
+
+    const res = await recordServerAttempt({
+      userId: userAId,
+      sessionId: session.id,
+      cardId: cardAId,
+      clientEventId: generateClientEventId(),
+      questionKey: `learn:${cardAId}:1`,
+      attemptKind: "answer",
+      userAnswer: "tenacity",
+      activeElapsedMs: 1000,
+      expectedVersion: updateRes.new_version!,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.code).toBe("SESSION_TERMINATED");
+  });
+
   it("Local backup key scoping and user data cleanup on logout", () => {
     const keyA = buildLocalBackupKey("user_a", "set_1", "learn", "sess_1");
     const keyGuest = buildLocalBackupKey("guest", "set_1", "learn", "sess_2");

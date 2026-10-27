@@ -1,13 +1,17 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DEMO_READING_EXERCISE } from "@/data/demo/exercises.demo";
+import { fetchAllSetCards } from "@/features/sets/sets-client";
+import type { ReadingOutput } from "@/features/ai/schemas";
 import {
   ArrowLeft,
   BookOpen,
@@ -16,16 +20,124 @@ import {
   XCircle,
   HelpCircle,
   Sparkles,
+  Info,
 } from "lucide-react";
 
 function ReadingExerciseContent() {
   const params = useParams();
   const setId = (params?.id as string) || "";
 
-  const [exercise] = useState(DEMO_READING_EXERCISE);
+  const [exercise, setExercise] = useState<ReadingOutput>(DEMO_READING_EXERCISE);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+
   const [showTranslation, setShowTranslation] = useState(false);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, number>>({});
   const [isSubmitted, setIsSubmitted] = useState(false);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      if (setId.startsWith("d000")) {
+        setExercise(DEMO_READING_EXERCISE);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [setRes, cards] = await Promise.all([
+          fetch(`/api/sets/${setId}`),
+          fetchAllSetCards(setId),
+        ]);
+
+        if (ignore) return;
+
+        if (!setRes.ok) {
+          if (setRes.status === 404) {
+            setError("Không tìm thấy bộ từ vựng hoặc bộ từ vựng là riêng tư");
+          } else {
+            setError("Lỗi khi tải thông tin bộ từ vựng");
+          }
+          return;
+        }
+
+        if (cards.length === 0) {
+          setError("Bộ từ vựng này chưa có thẻ từ vựng nào để tạo bài đọc hiểu");
+          return;
+        }
+
+        // Request AI batch
+        try {
+          const batchRes = await fetch("/api/ai/batches", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              setId,
+              mode: "reading",
+              cardIds: cards.slice(0, 10).map((c) => c.id),
+            }),
+          });
+
+          if (batchRes.ok) {
+            const batchJson = await batchRes.json();
+            if (batchJson.data?.output) {
+              setExercise(batchJson.data.output as ReadingOutput);
+              setLoading(false);
+              return;
+            }
+          }
+          // AI disabled or queued - fall back gracefully to demo exercise with notice
+          setAiNotice("Tính năng sinh bài đọc AI tạm thời chưa hoàn tất cho bộ này. Hiển thị bài đọc tham khảo mẫu.");
+          setExercise(DEMO_READING_EXERCISE);
+        } catch {
+          setAiNotice("Không thể kết nối dịch vụ AI. Hiển thị bài đọc tham khảo mẫu.");
+          setExercise(DEMO_READING_EXERCISE);
+        }
+      } catch (err) {
+        if (ignore) return;
+        const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
+        setError(msg);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (setId) {
+      void loadData();
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [setId]);
+
+  if (loading) {
+    return (
+      <AppShell>
+        <LoadingState message="Đang chuẩn bị bài đọc hiểu thông minh..." />
+      </AppShell>
+    );
+  }
+
+  if (error) {
+    return (
+      <AppShell>
+        <div className="max-w-xl mx-auto space-y-4">
+          <ErrorAlert message={error} />
+          <Link href={`/sets/${setId}`} className="inline-block">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Quay lại học phần
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleSelectOption = (questionId: string, optionIndex: number) => {
     if (isSubmitted) return;
@@ -63,6 +175,13 @@ function ReadingExerciseContent() {
             </Badge>
           </div>
         </div>
+
+        {aiNotice && (
+          <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs rounded-xl">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>{aiNotice}</span>
+          </div>
+        )}
 
         {/* Reading Passage Card */}
         <Card className="p-6 sm:p-8 space-y-5">

@@ -69,9 +69,10 @@ export async function POST(request: Request) {
     );
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : "Lỗi xử lý phiên học";
+    const isNotFound = message.startsWith("NOT_FOUND");
     return NextResponse.json(
-      { error: { code: "INTERNAL_ERROR", message } },
-      { status: 500 }
+      { error: { code: isNotFound ? "NOT_FOUND" : "INTERNAL_ERROR", message } },
+      { status: isNotFound ? 404 : 500 }
     );
   }
 }

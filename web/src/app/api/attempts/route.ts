@@ -76,9 +76,19 @@ export async function POST(request: Request) {
         );
       }
 
+      const status =
+        result.code === "NOT_FOUND"
+          ? 404
+          : result.code === "INVALID_CARD_MEMBERSHIP" ||
+            result.code === "INVALID_ATTEMPT_KIND" ||
+            result.code === "INVALID_ANSWER" ||
+            result.code === "SESSION_TERMINATED"
+          ? 400
+          : 403;
+
       return NextResponse.json(
         { error: { code: result.code || "ATTEMPT_FAILED", message: result.error } },
-        { status: result.code === "NOT_FOUND" ? 404 : 403 }
+        { status }
       );
     }
 

@@ -80,7 +80,7 @@ describe("T14 - Gemini Provider Adapter & Zod Validation", () => {
     });
 
     expect(res.success).toBe(false);
-    expect(res.errorCode).toBe("PROVIDER_ERROR");
+    expect(res.errorCode).toBe("PARSE_ERROR");
     expect(res.error).toContain("unexpected cardId");
   });
 
@@ -156,5 +156,88 @@ describe("T14 - Gemini Provider Adapter & Zod Validation", () => {
 
     expect(res.success).toBe(false);
     expect(res.errorCode).toBe("TIMEOUT_BUDGET_EXCEEDED");
+  });
+
+  it("R08: Rejects incomplete output when fewer cards than requested are returned", async () => {
+    const mockProvider: AiProvider = {
+      generate: async (modelId) => ({
+        modelId,
+        text: JSON.stringify({
+          items: [
+            {
+              cardId: "11111111-1111-4111-8111-111111111111",
+              sentenceEn: "She showed a tenacious spirit during difficult times.",
+              sentenceVi: "Cô ấy thể hiện tinh thần kiên trì trong những lúc khó khăn.",
+              targetSurface: "tenacious",
+              explanationVi: "Tính từ chỉ sự kiên trì không từ bỏ.",
+            },
+            // Missing 22222222-2222-4222-8222-222222222222!
+          ],
+        }),
+      }),
+    };
+
+    const res = await generateAiBatchContent("context", sampleCards, {
+      injectedProvider: mockProvider,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.errorCode).toBe("PARSE_ERROR");
+  });
+
+  it("R08: Rejects reading output containing unknown card IDs not present in input", async () => {
+    const mockProvider: AiProvider = {
+      generate: async (modelId) => ({
+        modelId,
+        text: JSON.stringify({
+          title: "The Hardworking Student",
+          level: "A2",
+          passageEn: "This is a reading passage about diligence and hard work.",
+          translationVi: "Đây là bài đọc về sự chăm chỉ và cần cù.",
+          usedCardIds: ["99999999-9999-4999-8999-999999999999"], // Unknown ID!
+          questions: [
+            { id: "q1", questionEn: "Question 1?", options: ["A", "B", "C", "D"], correctIndex: 0, explanationVi: "Ex 1" },
+            { id: "q2", questionEn: "Question 2?", options: ["A", "B", "C", "D"], correctIndex: 1, explanationVi: "Ex 2" },
+            { id: "q3", questionEn: "Question 3?", options: ["A", "B", "C", "D"], correctIndex: 2, explanationVi: "Ex 3" },
+            { id: "q4", questionEn: "Question 4?", options: ["A", "B", "C", "D"], correctIndex: 3, explanationVi: "Ex 4" },
+          ],
+        }),
+      }),
+    };
+
+    const res = await generateAiBatchContent("reading", sampleCards, {
+      injectedProvider: mockProvider,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.errorCode).toBe("PARSE_ERROR");
+  });
+
+  it("R08: Rejects reading questions with duplicate options", async () => {
+    const mockProvider: AiProvider = {
+      generate: async (modelId) => ({
+        modelId,
+        text: JSON.stringify({
+          title: "The Hardworking Student",
+          level: "A2",
+          passageEn: "This is a reading passage about diligence and hard work.",
+          translationVi: "Đây là bài đọc về sự chăm chỉ và cần cù.",
+          usedCardIds: ["11111111-1111-4111-8111-111111111111"],
+          questions: [
+            { id: "q1", questionEn: "Question 1?", options: ["Same", "Same", "C", "D"], correctIndex: 0, explanationVi: "Ex 1" }, // Duplicate options!
+            { id: "q2", questionEn: "Question 2?", options: ["A", "B", "C", "D"], correctIndex: 1, explanationVi: "Ex 2" },
+            { id: "q3", questionEn: "Question 3?", options: ["A", "B", "C", "D"], correctIndex: 2, explanationVi: "Ex 3" },
+            { id: "q4", questionEn: "Question 4?", options: ["A", "B", "C", "D"], correctIndex: 3, explanationVi: "Ex 4" },
+          ],
+        }),
+      }),
+    };
+
+    const res = await generateAiBatchContent("reading", sampleCards, {
+      injectedProvider: mockProvider,
+    });
+
+    expect(res.success).toBe(false);
+    expect(res.errorCode).toBe("PARSE_ERROR");
   });
 });

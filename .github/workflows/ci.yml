@@ -26,8 +26,10 @@ jobs:
       - name: Secret Scanning Audit
         run: |
           echo "Scanning for exposed private keys or tokens..."
-          # Reject committed real private keys or Supabase secrets
+          # Reject committed real private keys, Gemini keys, or Supabase service secrets
           ! grep -rE "AIzaSy[A-Za-z0-9_-]{33}" --exclude-dir={node_modules,.next,.git} . || (echo "ERROR: Gemini API key detected in source!" && exit 1)
+          ! grep -rE "sbp_[a-zA-Z0-9]{40}" --exclude-dir={node_modules,.next,.git} . || (echo "ERROR: Supabase personal token detected!" && exit 1)
+          ! grep -rE "-----BEGIN (RSA |EC )?PRIVATE KEY-----" --exclude-dir={node_modules,.next,.git} . || (echo "ERROR: Private key detected in source!" && exit 1)
 
       - name: Run Handoff Contract Checks
         run: node scripts/check-handoff.mjs
@@ -50,6 +52,24 @@ jobs:
           CI: true
           AI_ENABLED: false
         run: npm run test
+
+      - name: Setup Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Start Supabase Local Stack
+        run: supabase start
+
+      - name: Run Integration Tests with Database
+        working-directory: ./web
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: "http://127.0.0.1:54321"
+          NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6ImFub24iLCJleHAiOjE5ODM4MTI5OTZ9.CRXP1A7WOeoJeXxjNni43kdQwgnWNReilDMblYTn_I0"
+          SUPABASE_SECRET_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZS1kZW1vIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImV4cCI6MTk4MzgxMjk5Nn0.EGIMUtflp_bHfPtFnLyepL5mgccpL5mgccpL5mgccpL"
+          CI: true
+          AI_ENABLED: false
+        run: npm run test:integration
 
       - name: Build Next.js Production Bundle
         working-directory: ./web

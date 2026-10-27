@@ -660,3 +660,73 @@ Blocker còn lại:
 - T22: Chờ URL production để thực hiện smoke test thực tế trên môi trường live
 Ticket tiếp theo: Thực hiện kết nối cloud (T20, T21) và chạy production smoke test (T22) khi có quyền truy cập dịch vụ
 ~~~
+
+
+## Kiểm tra độc lập 27/10/2026
+
+Đối chiếu source 7fd8a12: chạy lại lint/typecheck, 97 unit tests, 38 integration tests và production build đều PASS. Tuy nhiên chưa công nhận RC1/G0–G4 hoàn tất: đã tái hiện qua HTTP việc user B đọc snapshot học phần private A và ghi game_hit cho card ngoài phiên; còn UI demo, persistence chưa nối server và các khoảng trống AI/CI/học liệu. Xem [báo cáo độc lập](../reports/independent-review-20261027.md) và [bằng chứng](../reports/independent-review-20261027-evidence.json). Bảng ticket ở trên được giữ làm lịch sử báo cáo cũ; cần sửa theo R01–R13 rồi nghiệm thu lại trước production. Review không thay mã ứng dụng hoặc migrations.
+
+---
+
+~~~text
+Ngày/giờ: 27/10/2026 15:35 +07:00
+Ticket đang làm: Khắc phục toàn bộ các điểm đánh giá độc lập (R01 - R13)
+Files đã thay:
+- web/src/features/study/sessions.repository.ts (R01, R05, R06)
+- web/src/app/api/sessions/route.ts (R01, R06)
+- web/src/app/api/attempts/route.ts (R01, R06)
+- web/src/app/api/ai/batches/route.ts (R01, R06)
+- web/src/features/study/study-client-adapter.ts (R03, R04)
+- web/src/features/sets/sets-client.ts (R02, R05)
+- web/src/components/arcade/ArcadeClient.tsx (R03, R13)
+- web/src/app/explore/page.tsx (R02)
+- web/src/app/sets/[id]/page.tsx (R02)
+- web/src/app/sets/[id]/learn/page.tsx (R02, R03)
+- web/src/app/sets/[id]/flashcards/page.tsx & FlashcardViewer.tsx (R02, R03)
+- web/src/app/sets/[id]/match/page.tsx & MatchGameClient.tsx (R02, R03)
+- web/src/app/sets/[id]/dictation/page.tsx (R02, R03)
+- web/src/app/sets/[id]/speak/page.tsx (R02, R03)
+- web/src/app/sets/[id]/reading/page.tsx (R02, R03)
+- web/src/app/sets/[id]/translate/page.tsx (R02, R03)
+- web/src/app/sets/[id]/grammar/page.tsx (R02, R03)
+- web/src/features/ai/ai.repository.ts (R07)
+- web/src/features/ai/service.server.ts (R08, R09)
+- web/src/lib/env.server.ts (R09)
+- web/src/proxy.ts (R10)
+- web/src/app/auth/confirm/route.ts & /callback/route.ts (R10)
+- web/src/app/api/auth/forgot-password/route.ts & reset-password/route.ts (R10)
+- web/src/app/forgot-password/page.tsx & reset-password/page.tsx (R10)
+- .github/workflows/ci.yml (R11)
+- reports/content-review.md (R12)
+- web/tests/integration/persistence-flow.test.ts (R01, R06)
+- web/tests/integration/ai-cache-quota.test.ts (R07)
+- web/tests/unit/ai-service.test.ts (R08)
+- web/tests/unit/ui-contracts.test.ts (R04)
+
+Lệnh đã chạy + exit code:
+- npm run test (exit 0 - 101/101 unit tests passed across 12 suites)
+- npm run test:integration (exit 0 - 43/43 integration tests passed across 9 suites)
+- npm run lint (exit 0 - 0 errors, 0 warnings with --max-warnings 0)
+- npm run typecheck (exit 0 - 0 errors with tsc --noEmit)
+- npm run build (exit 0 - 42 routes compiled with Next 16 Turbopack)
+- node scripts/check-handoff.mjs (exit 0 - all checks passed)
+
+Chi tiết khắc phục 13 hạng mục (R01 - R13):
+1. R01 & R06: Bảo vệ quyền riêng tư & phân quyền máy chủ. Endpoint session, attempt, và AI batches kiểm tra nghiêm ngặt `is_public || owner_id === userId` (trả 404 cho set private của người khác). `recordServerAttempt` chặn phiên terminated, xác thực card thuộc content_snapshot, và kiểm tra tính chính xác của game_hit.
+2. R02 & R03: Nối dữ liệu học phần thật qua `fetchAllSetCards` và đồng bộ tiến độ học lên server (`initServerSession` + `sendServerAttempt`). Không dùng DEMO_CARDS ngụy trang lỗi cho học phần thật.
+3. R04: Định danh localStorage theo chuẩn `eva:v1:<userId>:` phân lập 100% dữ liệu giữa các người dùng; hàm `clearUserLocalData` dọn dẹp triệt để khi đăng xuất.
+4. R05: Triển khai pagination loop (chunk size 1,000) cả ở database repository và client cursor helper, xử lý mượt mà các bộ từ >500 đến >1,000 thẻ mà không bị cắt cụt.
+5. R07: Hàm `finalize_ai_batch_v1` xử lý failure token an toàn; trả về trạng thái failed thay vì false ready khi DB reject lease.
+6. R08: `validateModeOutput` kiểm tra chặt chẽ exact card coverage, subset thẻ reading và 4 options duy nhất.
+7. R09: Enforce `AI_ENABLED` kill switch và sử dụng biến cấu hình `GEMINI_MODEL_FALLBACK` đã xác minh.
+8. R10: Hoàn thiện luồng auth với `/forgot-password`, `/reset-password`, endpoint API, Next 16 Proxy session refresh và route alias `/auth/confirm`, `/auth/callback` khớp deployment runbook.
+9. R11: Cập nhật `.github/workflows/ci.yml` bổ sung secret scan đa dạng (private key, Supabase personal tokens, Gemini keys) và tích hợp Supabase CLI chạy integration tests có database trên CI.
+10. R12: Định nghĩa rõ ràng 32 thẻ là bộ học liệu Smoke/Internal Testing trong `reports/content-review.md`, xác lập tiêu chí mở rộng >= 300 thẻ khi ra mắt public beta.
+11. R13: Tích hợp pipeline ghi nhận attempt đồng nhất cho sự kiện gõ phím bắn trúng mục tiêu trong Word Blaster.
+
+Blocker còn lại:
+- T20: Chờ cấp Supabase production project ref từ chủ dự án để chạy push migrations.
+- T21: Chờ tạo repository GitHub và kết nối Vercel.
+- T22: Chờ URL production để thực hiện smoke test live.
+Ticket tiếp theo: Tiến hành triển khai cloud khi chủ dự án bàn giao thông tin hosting/repository.
+~~~

@@ -25,7 +25,12 @@ import type {
   ArcadeMode,
 } from "@/features/arcade/types";
 import { ArcadeCanvas } from "./ArcadeCanvas";
-import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import {
+  recordLocalAttempt,
+  generateClientEventId,
+  initServerSession,
+  sendServerAttempt,
+} from "@/features/study/study-client-adapter";
 import {
   Gamepad2,
   Zap,
@@ -88,6 +93,8 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
   const inputRef = useRef<HTMLInputElement>(null);
   const isComposingRef = useRef(false);
+  const serverSessionIdRef = useRef<string | null>(null);
+  const serverVersionRef = useRef<number>(1);
 
   // Start game handler
   const handleStartGame = () => {
@@ -97,6 +104,17 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
     setIsGameActive(true);
     setLastEvents([]);
     setInputVal("");
+
+    // Initialize or resume server study session (R03 fix)
+    initServerSession(
+      currentSet.id,
+      selectedMode === "typing" ? "arcade_typing" : "arcade_recall"
+    ).then((res) => {
+      if (res) {
+        serverSessionIdRef.current = res.sessionId;
+        serverVersionRef.current = res.version;
+      }
+    });
 
     setTimeout(() => {
       inputRef.current?.focus();
@@ -144,6 +162,80 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
     [isMuted]
   );
 
+  // Unified event processing pipeline (R13 & R03 fix)
+  const processEvents = useCallback(
+    (events: ArcadeEvent[]) => {
+      if (!events || events.length === 0) return;
+
+      for (const evt of events) {
+        if (evt.type === "TARGET_HIT") {
+          playSound("hit");
+          recordLocalAttempt({
+            clientEventId: generateClientEventId(),
+            sessionId,
+            setId: currentSet.id,
+            cardId: evt.payload?.cardId || "",
+            mode: "arcade",
+            questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
+            userAnswer: evt.payload?.canonicalAnswer || "matched",
+            isCorrect: true,
+            durationMs: 2000,
+            answeredAt: new Date().toISOString(),
+          });
+
+          if (serverSessionIdRef.current) {
+            sendServerAttempt({
+              sessionId: serverSessionIdRef.current,
+              cardId: evt.payload?.cardId || "",
+              clientEventId: generateClientEventId(),
+              questionKey: `arcade:${evt.payload?.cardId || ""}:${Date.now()}`,
+              attemptKind: "game_hit",
+              answerText: evt.payload?.canonicalAnswer || "",
+              activeElapsedMs: 2000,
+              expectedVersion: serverVersionRef.current,
+            }).then((res) => {
+              if (res?.newVersion) serverVersionRef.current = res.newVersion;
+            });
+          }
+        } else if (evt.type === "TARGET_MISSED") {
+          playSound("miss");
+          recordLocalAttempt({
+            clientEventId: generateClientEventId(),
+            sessionId,
+            setId: currentSet.id,
+            cardId: evt.payload?.cardId || "",
+            mode: "arcade",
+            questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
+            userAnswer: "",
+            isCorrect: false,
+            durationMs: 4000,
+            answeredAt: new Date().toISOString(),
+          });
+
+          if (serverSessionIdRef.current) {
+            sendServerAttempt({
+              sessionId: serverSessionIdRef.current,
+              cardId: evt.payload?.cardId || "",
+              clientEventId: generateClientEventId(),
+              questionKey: `arcade:${evt.payload?.cardId || ""}:${Date.now()}`,
+              attemptKind: "game_miss",
+              answerText: "",
+              activeElapsedMs: 4000,
+              expectedVersion: serverVersionRef.current,
+            }).then((res) => {
+              if (res?.newVersion) serverVersionRef.current = res.newVersion;
+            });
+          }
+        } else if (evt.type === "WRONG_KEY") {
+          playSound("wrong");
+          setIsInputShaking(true);
+          setTimeout(() => setIsInputShaking(false), 300);
+        }
+      }
+    },
+    [currentSet.id, playSound, selectedMode, sessionId]
+  );
+
   // Engine step handler
   const handleStep = useCallback(
     (deltaMs: number) => {
@@ -154,44 +246,13 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
         if (events.length > 0) {
           setLastEvents(events);
-
-          for (const evt of events) {
-            if (evt.type === "TARGET_HIT") {
-              playSound("hit");
-              recordLocalAttempt({
-                clientEventId: generateClientEventId(),
-                sessionId,
-                setId: currentSet.id,
-                cardId: evt.payload?.cardId || "",
-                mode: "arcade",
-                questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
-                userAnswer: evt.payload?.canonicalAnswer || "matched",
-                isCorrect: true,
-                durationMs: 2000,
-                answeredAt: new Date().toISOString(),
-              });
-            } else if (evt.type === "TARGET_MISSED") {
-              playSound("miss");
-              recordLocalAttempt({
-                clientEventId: generateClientEventId(),
-                sessionId,
-                setId: currentSet.id,
-                cardId: evt.payload?.cardId || "",
-                mode: "arcade",
-                questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
-                userAnswer: "",
-                isCorrect: false,
-                durationMs: 4000,
-                answeredAt: new Date().toISOString(),
-              });
-            }
-          }
+          processEvents(events);
         }
 
         return nextState;
       });
     },
-    [cardLookup, currentSet.id, playSound, selectedMode, sessionId]
+    [cardLookup, processEvents]
   );
 
   // Input text change handler
@@ -207,11 +268,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
         const { state: nextState, events } = consumeText(prev, charToAdd);
         if (events.length > 0) {
           setLastEvents(events);
-          if (events.some((ev) => ev.type === "WRONG_KEY")) {
-            playSound("wrong");
-            setIsInputShaking(true);
-            setTimeout(() => setIsInputShaking(false), 300);
-          }
+          processEvents(events);
         }
         return nextState;
       });

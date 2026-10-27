@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
@@ -8,8 +8,13 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DEMO_TRANSLATION_EXERCISES } from "@/data/demo/exercises.demo";
 import { normalizeAnswerText } from "@/features/study/engine";
+import { fetchAllSetCards } from "@/features/sets/sets-client";
+import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import type { TranslationOutput } from "@/features/ai/schemas";
 import {
   ArrowLeft,
   CheckCircle2,
@@ -17,25 +22,110 @@ import {
   HelpCircle,
   ArrowRight,
   Sparkles,
+  Info,
 } from "lucide-react";
 
 function TranslationExerciseContent() {
   const params = useParams();
   const setId = (params?.id as string) || "";
 
-  const [exercises] = useState(DEMO_TRANSLATION_EXERCISES.exercises);
+  const [exercises, setExercises] = useState(DEMO_TRANSLATION_EXERCISES.exercises);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [userAnswer, setUserAnswer] = useState("");
   const [isEvaluated, setIsEvaluated] = useState(false);
   const [isMatched, setIsMatched] = useState(false);
   const [showHints, setShowHints] = useState(false);
   const [score, setScore] = useState(0);
+  const [sessionId] = useState(() => `session_trans_${Date.now()}`);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      if (setId.startsWith("d000")) {
+        setExercises(DEMO_TRANSLATION_EXERCISES.exercises);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [setRes, cards] = await Promise.all([
+          fetch(`/api/sets/${setId}`),
+          fetchAllSetCards(setId),
+        ]);
+
+        if (ignore) return;
+
+        if (!setRes.ok) {
+          if (setRes.status === 404) {
+            setError("Không tìm thấy bộ từ vựng hoặc bộ từ vựng là riêng tư");
+          } else {
+            setError("Lỗi khi tải thông tin bộ từ vựng");
+          }
+          return;
+        }
+
+        if (cards.length === 0) {
+          setError("Bộ từ vựng này chưa có thẻ từ vựng nào để luyện dịch câu");
+          return;
+        }
+
+        // Request AI batch
+        try {
+          const batchRes = await fetch("/api/ai/batches", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              setId,
+              mode: "translation",
+              cardIds: cards.slice(0, 5).map((c) => c.id),
+            }),
+          });
+
+          if (batchRes.ok) {
+            const batchJson = await batchRes.json();
+            const output = batchJson.data?.output as TranslationOutput | undefined;
+            if (output && output.exercises && output.exercises.length > 0) {
+              setExercises(output.exercises);
+              setLoading(false);
+              return;
+            }
+          }
+          setAiNotice("Tính năng dịch AI tạm thời chưa hoàn tất cho bộ này. Hiển thị bài tập tham khảo mẫu.");
+          setExercises(DEMO_TRANSLATION_EXERCISES.exercises);
+        } catch {
+          setAiNotice("Không thể kết nối dịch vụ AI. Hiển thị bài tập tham khảo mẫu.");
+          setExercises(DEMO_TRANSLATION_EXERCISES.exercises);
+        }
+      } catch (err) {
+        if (ignore) return;
+        const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
+        setError(msg);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (setId) {
+      void loadData();
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [setId]);
 
   const currentExercise = exercises[currentIndex];
 
   const handleCheck = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
-    if (!userAnswer.trim() || isEvaluated) return;
+    if (!userAnswer.trim() || isEvaluated || !currentExercise) return;
 
     const normalizedUser = normalizeAnswerText(userAnswer);
 
@@ -49,6 +139,19 @@ function TranslationExerciseContent() {
     if (matched) {
       setScore((s) => s + 1);
     }
+
+    recordLocalAttempt({
+      clientEventId: generateClientEventId(),
+      sessionId,
+      setId,
+      cardId: currentExercise.cardId,
+      mode: "learn",
+      questionType: "type_in",
+      userAnswer,
+      isCorrect: matched,
+      durationMs: 4000,
+      answeredAt: new Date().toISOString(),
+    });
   };
 
   const handleNext = () => {
@@ -62,6 +165,30 @@ function TranslationExerciseContent() {
   };
 
   const isComplete = currentIndex === exercises.length - 1 && isEvaluated;
+
+  if (loading) {
+    return (
+      <AppShell>
+        <LoadingState message="Đang chuẩn bị bài tập dịch câu thông minh..." />
+      </AppShell>
+    );
+  }
+
+  if (error || !currentExercise) {
+    return (
+      <AppShell>
+        <div className="max-w-2xl mx-auto space-y-4">
+          <ErrorAlert message={error || "Không có bài tập dịch cho bộ từ vựng này"} />
+          <Link href={`/sets/${setId}`} className="inline-block">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Quay lại học phần
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -85,6 +212,13 @@ function TranslationExerciseContent() {
             </span>
           </div>
         </div>
+
+        {aiNotice && (
+          <div className="flex items-center gap-2 p-3 bg-blue-500/10 border border-blue-500/20 text-blue-700 dark:text-blue-300 text-xs rounded-xl">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>{aiNotice}</span>
+          </div>
+        )}
 
         {/* Progress bar */}
         <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">

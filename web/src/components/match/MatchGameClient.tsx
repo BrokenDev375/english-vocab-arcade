@@ -12,7 +12,12 @@ import {
   type MatchTile,
   type MatchStage,
 } from "@/features/match/engine";
-import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import {
+  recordLocalAttempt,
+  generateClientEventId,
+  initServerSession,
+  sendServerAttempt,
+} from "@/features/study/study-client-adapter";
 import {
   ArrowLeft,
   Clock,
@@ -41,6 +46,7 @@ interface MatchBoardProps {
   stage: MatchStage;
   setId: string;
   sessionId: string;
+  serverSessionRef: React.MutableRefObject<{ sessionId: string; version: number } | null>;
   onMismatch: () => void;
   onStageClear: () => void;
   isPaused: boolean;
@@ -50,6 +56,7 @@ function MatchBoard({
   stage,
   setId,
   sessionId,
+  serverSessionRef,
   onMismatch,
   onStageClear,
   isPaused,
@@ -121,20 +128,47 @@ function MatchBoard({
 
       const now = getNow();
       const elapsed = startTimeRef.current > 0 ? now - startTimeRef.current : 0;
+      const clientEventId = generateClientEventId();
+      const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+
+      const targetCard = stage.cards.find((c) => c.id === firstTile.cardId);
+      const answerText = targetCard
+        ? targetCard.term
+        : firstTile.type === "term"
+        ? firstTile.text
+        : clickedTile.text;
 
       // Persistently record attempt
       recordLocalAttempt({
-        clientEventId: generateClientEventId(),
-        sessionId,
+        clientEventId,
+        sessionId: effectiveSessionId,
         setId,
         cardId: firstTile.cardId,
         mode: "match",
         questionType: "match",
-        userAnswer: "matched",
+        userAnswer: answerText,
         isCorrect: true,
         durationMs: Math.max(0, elapsed),
         answeredAt: new Date(now).toISOString(),
       });
+
+      if (serverSessionRef.current) {
+        const currentSess = serverSessionRef.current;
+        void sendServerAttempt({
+          sessionId: currentSess.sessionId,
+          cardId: firstTile.cardId,
+          clientEventId,
+          questionKey: `match_${firstTile.cardId}`,
+          attemptKind: "answer",
+          answerText,
+          activeElapsedMs: Math.max(0, elapsed),
+          expectedVersion: currentSess.version,
+        }).then((res) => {
+          if (res?.newVersion && serverSessionRef.current) {
+            serverSessionRef.current.version = res.newVersion;
+          }
+        });
+      }
 
       // Check if all tiles in this stage are matched
       const allMatched = stage.tiles.every((t) => updatedStates[t.id] === "matched");
@@ -220,6 +254,19 @@ export function MatchGameClient({ setId, setTitle, cards }: MatchGameClientProps
   // Stats
   const [mismatchCount, setMismatchCount] = useState(0);
   const [sessionId] = useState(() => "session_match_" + Math.random().toString(36).slice(2));
+  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    void initServerSession(setId, "match").then((sess) => {
+      if (sess && !ignore) {
+        serverSessionRef.current = sess;
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [setId]);
 
   const currentStage: MatchStage | undefined = plan.stages[currentStageIdx];
 
@@ -430,6 +477,7 @@ export function MatchGameClient({ setId, setTitle, cards }: MatchGameClientProps
           stage={currentStage}
           setId={setId}
           sessionId={sessionId}
+          serverSessionRef={serverSessionRef}
           onMismatch={() => setMismatchCount((prev) => prev + 1)}
           onStageClear={handleStageClear}
           isPaused={isPaused}

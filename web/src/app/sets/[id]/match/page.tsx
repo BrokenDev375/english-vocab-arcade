@@ -9,6 +9,8 @@ import { MatchGameClient } from "@/components/match/MatchGameClient";
 import { DEMO_SETS, DEMO_CARDS } from "@/data/demo/vocabulary.demo";
 import type { MatchCard } from "@/features/match/engine";
 
+import { fetchAllSetCards } from "@/features/sets/sets-client";
+
 function MatchContent() {
   const params = useParams();
   const setId = params.id as string;
@@ -40,51 +42,37 @@ function MatchContent() {
 
       // 2. Fetch from API
       try {
-        const [setRes, cardsRes] = await Promise.all([
+        const [setRes, fetchedCards] = await Promise.all([
           fetch(`/api/sets/${setId}`),
-          fetch(`/api/sets/${setId}/cards?limit=500`),
+          fetchAllSetCards(setId),
         ]);
 
         if (ignore) return;
 
-        if (setRes.ok) {
-          const setData = await setRes.json();
-          setSetTitle(setData.data.title);
+        if (!setRes.ok) {
+          if (setRes.status === 404) {
+            setError("Không tìm thấy bộ từ vựng hoặc bộ từ vựng là riêng tư");
+          } else {
+            setError("Lỗi khi tải thông tin bộ từ vựng");
+          }
+          return;
         }
 
-        if (cardsRes.ok) {
-          const cardsData = await cardsRes.json();
-          if (cardsData.data && cardsData.data.length > 0) {
-            interface CardApiRow {
-              id: string;
-              term: string;
-              meaning_vi: string;
-            }
-            setCards(
-              cardsData.data.map((c: CardApiRow) => ({
-                id: c.id,
-                term: c.term,
-                meaningVi: c.meaning_vi,
-              }))
-            );
-          } else {
-            setCards(
-              DEMO_CARDS.map((c) => ({
-                id: c.id,
-                term: c.term,
-                meaningVi: c.meaningVi,
-              }))
-            );
-          }
-        } else {
-          setCards(
-            DEMO_CARDS.map((c) => ({
-              id: c.id,
-              term: c.term,
-              meaningVi: c.meaningVi,
-            }))
-          );
+        const setData = await setRes.json();
+        setSetTitle(setData.data.title);
+
+        if (fetchedCards.length === 0) {
+          setError("Bộ từ vựng này chưa có thẻ từ vựng nào để chơi ghép thẻ");
+          return;
         }
+
+        setCards(
+          fetchedCards.map((c) => ({
+            id: c.id,
+            term: c.term,
+            meaningVi: c.meaningVi,
+          }))
+        );
       } catch (err: unknown) {
         if (ignore) return;
         const msg = err instanceof Error ? err.message : "Lỗi tải học phần";

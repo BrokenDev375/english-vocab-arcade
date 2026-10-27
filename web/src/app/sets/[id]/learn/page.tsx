@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, Suspense, useCallback } from "react";
+import React, { useState, useEffect, Suspense, useCallback, useRef } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
@@ -16,7 +16,13 @@ import {
   type StudyCard,
   type StudyQuestion,
 } from "@/features/study/question-engine";
-import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import {
+  recordLocalAttempt,
+  generateClientEventId,
+  initServerSession,
+  sendServerAttempt,
+} from "@/features/study/study-client-adapter";
+import { fetchAllSetCards } from "@/features/sets/sets-client";
 import { ArrowLeft, GraduationCap } from "lucide-react";
 
 type StudyStage = "main" | "error_review" | "results";
@@ -37,6 +43,7 @@ function LearnContent() {
   const [correctCount, setCorrectCount] = useState(0);
   const [failedCards, setFailedCards] = useState<StudyCard[]>([]);
   const [sessionId] = useState(() => `session_learn_${Date.now()}`);
+  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
 
   const startNewSession = useCallback((cardPool: StudyCard[]) => {
     if (cardPool.length === 0) return;
@@ -76,51 +83,50 @@ function LearnContent() {
       }
 
       try {
-        const [setRes, cardsRes] = await Promise.all([
+        const [setRes, fetchedCards] = await Promise.all([
           fetch(`/api/sets/${setId}`),
-          fetch(`/api/sets/${setId}/cards?limit=500`),
+          fetchAllSetCards(setId),
         ]);
 
         if (ignore) return;
 
-        if (setRes.ok) {
-          const setData = await setRes.json();
-          setSetTitle(setData.data.title);
+        if (!setRes.ok) {
+          if (setRes.status === 404) {
+            setError("Không tìm thấy bộ từ vựng hoặc bộ từ vựng là riêng tư");
+          } else {
+            setError("Lỗi khi tải thông tin bộ từ vựng");
+          }
+          return;
         }
 
-        let pool: StudyCard[] = [];
-        if (cardsRes.ok) {
-          const cardsData = await cardsRes.json();
-          if (cardsData.data && cardsData.data.length > 0) {
-            interface CardApiRow {
-              id: string;
-              term: string;
-              meaning_vi: string;
-              part_of_speech?: string | null;
-              ipa?: string | null;
-              example_en?: string | null;
-              example_vi?: string | null;
-              accepted_answers?: string[] | null;
-            }
-            pool = cardsData.data.map((c: CardApiRow) => ({
-              id: c.id,
-              term: c.term,
-              meaningVi: c.meaning_vi,
-              partOfSpeech: c.part_of_speech || undefined,
-              ipa: c.ipa || undefined,
-              exampleEn: c.example_en || undefined,
-              exampleVi: c.example_vi || undefined,
-              acceptedAnswers: c.accepted_answers || [c.term],
-            }));
-          } else {
-            pool = DEMO_CARDS;
-          }
-        } else {
-          pool = DEMO_CARDS;
+        const setData = await setRes.json();
+        setSetTitle(setData.data.title);
+
+        if (fetchedCards.length === 0) {
+          setError("Bộ từ vựng này chưa có thẻ từ vựng nào để học");
+          return;
         }
+
+        const pool: StudyCard[] = fetchedCards.map((c) => ({
+          id: c.id,
+          term: c.term,
+          meaningVi: c.meaningVi,
+          partOfSpeech: c.partOfSpeech,
+          ipa: c.ipa || undefined,
+          exampleEn: c.exampleEn || undefined,
+          exampleVi: c.exampleVi || undefined,
+          acceptedAnswers: c.acceptedAnswers || [c.term],
+        }));
 
         setCards(pool);
         startNewSession(pool);
+
+        // Connect server session
+        void initServerSession(setId, "learn").then((sess) => {
+          if (sess && !ignore) {
+            serverSessionRef.current = sess;
+          }
+        });
       } catch (err: unknown) {
         if (ignore) return;
         const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
@@ -154,10 +160,13 @@ function LearnContent() {
       }
     }
 
+    const clientEventId = generateClientEventId();
+    const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+
     // Record attempt persistently
     recordLocalAttempt({
-      clientEventId: generateClientEventId(),
-      sessionId,
+      clientEventId,
+      sessionId: effectiveSessionId,
       setId,
       cardId: currentQ.cardId,
       mode: "learn",
@@ -167,6 +176,24 @@ function LearnContent() {
       durationMs,
       answeredAt: new Date().toISOString(),
     });
+
+    if (serverSessionRef.current) {
+      const currentSess = serverSessionRef.current;
+      void sendServerAttempt({
+        sessionId: currentSess.sessionId,
+        cardId: currentQ.cardId,
+        clientEventId,
+        questionKey: currentQ.id || currentQ.cardId,
+        attemptKind: "answer",
+        answerText: userAnswer,
+        activeElapsedMs: durationMs,
+        expectedVersion: currentSess.version,
+      }).then((res) => {
+        if (res?.newVersion && serverSessionRef.current) {
+          serverSessionRef.current.version = res.newVersion;
+        }
+      });
+    }
   };
 
   const handleNextQuestion = () => {

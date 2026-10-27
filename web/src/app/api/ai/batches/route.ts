@@ -35,30 +35,30 @@ export async function POST(request: Request) {
     const { setId, mode, cardIds, targetLevel, nonce } = parsed.data;
     const adminClient = getSupabaseAdminClient();
 
-    // 1. Fetch set to verify existence & read content_revision
+    // 1. Fetch set to verify existence, visibility & read content_revision
     const { data: setRow, error: setError } = await adminClient
       .from("learning_sets")
-      .select("id, content_revision, cefr_level")
+      .select("id, owner_id, is_public, content_revision, cefr_level")
       .eq("id", setId)
       .maybeSingle();
 
-    if (setError || !setRow) {
+    if (setError || !setRow || (!setRow.is_public && setRow.owner_id !== user.id)) {
       return NextResponse.json(
-        { error: { code: "NOT_FOUND", message: "Bộ từ vựng không tồn tại" } },
+        { error: { code: "NOT_FOUND", message: "Bộ từ vựng không tồn tại hoặc bạn không có quyền truy cập" } },
         { status: 404 }
       );
     }
 
-    // 2. Fetch cards data
+    // 2. Fetch cards data and ensure ALL requested cardIds belong to this set
     const { data: cardRows, error: cardsError } = await adminClient
       .from("vocabulary_cards")
       .select("id, term, meaning_vi, part_of_speech, cefr_level, example_en")
       .eq("set_id", setId)
       .in("id", cardIds);
 
-    if (cardsError || !cardRows || cardRows.length === 0) {
+    if (cardsError || !cardRows || cardRows.length !== cardIds.length) {
       return NextResponse.json(
-        { error: { code: "CARDS_NOT_FOUND", message: "Không tìm thấy thẻ hợp lệ" } },
+        { error: { code: "CARDS_NOT_FOUND", message: "Một số thẻ không tồn tại trong bộ từ vựng" } },
         { status: 404 }
       );
     }

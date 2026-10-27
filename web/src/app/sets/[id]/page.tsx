@@ -5,6 +5,8 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { DEMO_SETS, DEMO_CARDS } from "@/data/demo/vocabulary.demo";
+import { notFound } from "next/navigation";
+import { createSupabaseServerClient } from "@/lib/supabase/server";
 import {
   Gamepad2,
   Layers,
@@ -30,9 +32,88 @@ interface SetDetailPageProps {
 
 export default async function SetDetailPage({ params }: SetDetailPageProps) {
   const { id } = await params;
-  const currentSet = DEMO_SETS.find((s) => s.id === id) || DEMO_SETS[0];
 
-  const cards = currentSet.cards || DEMO_CARDS;
+  let currentSet: {
+    id: string;
+    title: string;
+    description: string;
+    cefrLevel: string;
+    topic: string;
+  };
+  let cards: Array<{
+    id: string;
+    term: string;
+    meaningVi: string;
+    partOfSpeech: string;
+    ipa?: string | null;
+    cefrLevel?: string | null;
+    exampleEn?: string | null;
+    exampleVi?: string | null;
+    position: number;
+  }>;
+
+  if (id.startsWith("d000")) {
+    const demo = DEMO_SETS.find((s) => s.id === id);
+    if (!demo) {
+      notFound();
+    }
+    currentSet = {
+      id: demo.id,
+      title: demo.title,
+      description: demo.description || "",
+      cefrLevel: demo.cefrLevel,
+      topic: demo.topic,
+    };
+    const rawCards = demo.cards || DEMO_CARDS;
+    cards = rawCards.map((c) => ({
+      id: c.id,
+      term: c.term,
+      meaningVi: c.meaningVi,
+      partOfSpeech: c.partOfSpeech,
+      ipa: c.ipa || null,
+      cefrLevel: c.cefrLevel || null,
+      exampleEn: c.exampleEn || null,
+      exampleVi: c.exampleVi || null,
+      position: c.position,
+    }));
+  } else {
+    const supabase = await createSupabaseServerClient();
+    const { data: setRow } = await supabase
+      .from("learning_sets")
+      .select("id, title, description, cefr_level, topic, is_public")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (!setRow) {
+      notFound();
+    }
+
+    currentSet = {
+      id: setRow.id,
+      title: setRow.title,
+      description: setRow.description || "",
+      cefrLevel: setRow.cefr_level || "A1",
+      topic: setRow.topic || "general",
+    };
+
+    const { data: cardsRows } = await supabase
+      .from("vocabulary_cards")
+      .select("id, term, meaning_vi, part_of_speech, cefr_level, ipa, example_en, example_vi, position")
+      .eq("set_id", id)
+      .order("position", { ascending: true });
+
+    cards = (cardsRows || []).map((c) => ({
+      id: c.id,
+      term: c.term,
+      meaningVi: c.meaning_vi,
+      partOfSpeech: c.part_of_speech,
+      cefrLevel: c.cefr_level || null,
+      ipa: c.ipa || null,
+      exampleEn: c.example_en || null,
+      exampleVi: c.example_vi || null,
+      position: c.position,
+    }));
+  }
 
   return (
     <AppShell>

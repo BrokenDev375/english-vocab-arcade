@@ -1,15 +1,19 @@
 "use client";
 
-import React, { useState, Suspense } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
+import { LoadingState } from "@/components/ui/LoadingState";
+import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { DEMO_GRAMMAR_EXERCISES } from "@/data/demo/exercises.demo";
 import { shuffleWithSeed } from "@/features/study/engine";
-import type { GrammarExerciseSchema } from "@/features/ai/schemas";
+import { fetchAllSetCards } from "@/features/sets/sets-client";
+import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import type { GrammarExerciseSchema, GrammarOutput } from "@/features/ai/schemas";
 import type { z } from "zod";
 import {
   ArrowLeft,
@@ -20,6 +24,7 @@ import {
   RotateCcw,
   Delete,
   ArrowRight,
+  Info,
 } from "lucide-react";
 
 type GrammarExercise = z.infer<typeof GrammarExerciseSchema>;
@@ -32,6 +37,7 @@ interface ExerciseCardProps {
   onAnswerCorrect: () => void;
   isLast: boolean;
   setId: string;
+  sessionId: string;
   onRestart: () => void;
   score: number;
 }
@@ -44,6 +50,7 @@ function GrammarExerciseCard({
   onAnswerCorrect,
   isLast,
   setId,
+  sessionId,
   onRestart,
   score,
 }: ExerciseCardProps) {
@@ -103,6 +110,19 @@ function GrammarExerciseCard({
     if (correct) {
       onAnswerCorrect();
     }
+
+    recordLocalAttempt({
+      clientEventId: generateClientEventId(),
+      sessionId,
+      setId,
+      cardId: exercise.cardId,
+      mode: "learn",
+      questionType: "scramble",
+      userAnswer: userSentence,
+      isCorrect: correct,
+      durationMs: 4500,
+      answeredAt: new Date().toISOString(),
+    });
   };
 
   const isComplete = isLast && isEvaluated;
@@ -300,9 +320,93 @@ function GrammarExerciseContent() {
   const params = useParams();
   const setId = (params?.id as string) || "";
 
-  const [exercises] = useState(DEMO_GRAMMAR_EXERCISES.exercises);
+  const [exercises, setExercises] = useState(DEMO_GRAMMAR_EXERCISES.exercises);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [aiNotice, setAiNotice] = useState<string | null>(null);
+
   const [currentIndex, setCurrentIndex] = useState(0);
   const [score, setScore] = useState(0);
+  const [sessionId] = useState(() => `session_grm_${Date.now()}`);
+
+  useEffect(() => {
+    let ignore = false;
+
+    async function loadData() {
+      if (setId.startsWith("d000")) {
+        setExercises(DEMO_GRAMMAR_EXERCISES.exercises);
+        setLoading(false);
+        return;
+      }
+
+      try {
+        const [setRes, cards] = await Promise.all([
+          fetch(`/api/sets/${setId}`),
+          fetchAllSetCards(setId),
+        ]);
+
+        if (ignore) return;
+
+        if (!setRes.ok) {
+          if (setRes.status === 404) {
+            setError("Không tìm thấy bộ từ vựng hoặc bộ từ vựng là riêng tư");
+          } else {
+            setError("Lỗi khi tải thông tin bộ từ vựng");
+          }
+          return;
+        }
+
+        if (cards.length === 0) {
+          setError("Bộ từ vựng này chưa có thẻ từ vựng nào để luyện ngữ pháp");
+          return;
+        }
+
+        // Request AI batch
+        try {
+          const batchRes = await fetch("/api/ai/batches", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              setId,
+              mode: "grammar",
+              cardIds: cards.slice(0, 5).map((c) => c.id),
+            }),
+          });
+
+          if (batchRes.ok) {
+            const batchJson = await batchRes.json();
+            const output = batchJson.data?.output as GrammarOutput | undefined;
+            if (output && output.exercises && output.exercises.length > 0) {
+              setExercises(output.exercises);
+              setLoading(false);
+              return;
+            }
+          }
+          setAiNotice("Tính năng ngữ pháp AI tạm thời chưa hoàn tất cho bộ này. Hiển thị bài tập tham khảo mẫu.");
+          setExercises(DEMO_GRAMMAR_EXERCISES.exercises);
+        } catch {
+          setAiNotice("Không thể kết nối dịch vụ AI. Hiển thị bài tập tham khảo mẫu.");
+          setExercises(DEMO_GRAMMAR_EXERCISES.exercises);
+        }
+      } catch (err) {
+        if (ignore) return;
+        const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
+        setError(msg);
+      } finally {
+        if (!ignore) {
+          setLoading(false);
+        }
+      }
+    }
+
+    if (setId) {
+      void loadData();
+    }
+
+    return () => {
+      ignore = true;
+    };
+  }, [setId]);
 
   const currentExercise = exercises[currentIndex];
 
@@ -316,6 +420,30 @@ function GrammarExerciseContent() {
     setCurrentIndex(0);
     setScore(0);
   };
+
+  if (loading) {
+    return (
+      <AppShell>
+        <LoadingState message="Đang chuẩn bị bài tập ngữ pháp AI..." />
+      </AppShell>
+    );
+  }
+
+  if (error || !currentExercise) {
+    return (
+      <AppShell>
+        <div className="max-w-2xl mx-auto space-y-4">
+          <ErrorAlert message={error || "Không có bài tập ngữ pháp cho bộ từ vựng này"} />
+          <Link href={`/sets/${setId}`} className="inline-block">
+            <Button variant="outline" size="sm">
+              <ArrowLeft className="w-4 h-4 mr-1.5" />
+              Quay lại học phần
+            </Button>
+          </Link>
+        </div>
+      </AppShell>
+    );
+  }
 
   return (
     <AppShell>
@@ -340,6 +468,13 @@ function GrammarExerciseContent() {
           </div>
         </div>
 
+        {aiNotice && (
+          <div className="flex items-center gap-2 p-3 bg-purple-500/10 border border-purple-500/20 text-purple-700 dark:text-purple-300 text-xs rounded-xl">
+            <Info className="w-4 h-4 shrink-0" />
+            <span>{aiNotice}</span>
+          </div>
+        )}
+
         {/* Progress Bar */}
         <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
           <div
@@ -358,6 +493,7 @@ function GrammarExerciseContent() {
           onAnswerCorrect={() => setScore((s) => s + 1)}
           isLast={currentIndex === exercises.length - 1}
           setId={setId}
+          sessionId={sessionId}
           onRestart={handleRestart}
           score={score}
         />

@@ -18,6 +18,7 @@ export interface StudyAttemptRecord {
   isCorrect: boolean;
   durationMs: number;
   answeredAt: string;
+  userId?: string;
 }
 
 export interface LocalCardProgress {
@@ -55,8 +56,6 @@ export function generateClientEventId(): string {
   ).join("");
   return `${timestamp.slice(0, 8)}-${timestamp.slice(8, 12)}-4000-8000-${randomHex.slice(0, 12)}`;
 }
-
-const STORAGE_PREFIX = "eva_study_";
 
 /**
  * Builds user-scoped local backup key according to docs/04 Section 6:
@@ -109,16 +108,31 @@ export function getLocalSessionBackup(
 }
 
 /**
- * Clears user-scoped session data on logout.
+ * Builds user-scoped local attempt and progress storage keys.
+ */
+export function buildLocalAttemptsKey(userIdOrGuest: string, sessionId: string): string {
+  const safeUser = userIdOrGuest || "guest";
+  return `eva:v1:${safeUser}:attempts:${sessionId}`;
+}
+
+export function buildLocalProgressKey(userIdOrGuest: string, setId: string): string {
+  const safeUser = userIdOrGuest || "guest";
+  return `eva:v1:${safeUser}:progress:${setId}`;
+}
+
+/**
+ * Clears user-scoped session, attempt, and progress data on logout.
  */
 export function clearUserLocalData(userId: string): void {
   if (typeof window === "undefined") return;
   try {
-    const prefix = `eva:v1:${userId}:`;
+    const userPrefix = `eva:v1:${userId}:`;
     const keysToRemove: string[] = [];
     for (let i = 0; i < localStorage.length; i++) {
       const key = localStorage.key(i);
-      if (key && key.startsWith(prefix)) {
+      if (!key) continue;
+      // Remove all user-scoped keys and any unnamespaced legacy keys
+      if (key.startsWith(userPrefix) || key.startsWith("eva_study_")) {
         keysToRemove.push(key);
       }
     }
@@ -131,12 +145,14 @@ export function clearUserLocalData(userId: string): void {
 }
 
 /**
- * Save attempt to local persistence queue (idempotent by clientEventId).
+ * Save attempt to user-scoped local persistence queue (idempotent by clientEventId).
  */
-export function recordLocalAttempt(attempt: StudyAttemptRecord): void {
+export function recordLocalAttempt(attempt: StudyAttemptRecord, userId: string = "guest"): void {
   if (typeof window === "undefined") return;
 
-  const key = `${STORAGE_PREFIX}attempts_${attempt.sessionId}`;
+  const safeUser = attempt.userId || userId || "guest";
+  const key = buildLocalAttemptsKey(safeUser, attempt.sessionId);
+
   try {
     const raw = localStorage.getItem(key);
     const existing: StudyAttemptRecord[] = raw ? JSON.parse(raw) : [];
@@ -150,16 +166,16 @@ export function recordLocalAttempt(attempt: StudyAttemptRecord): void {
     localStorage.setItem(key, JSON.stringify(existing));
 
     // Also update local card SRS progress
-    updateLocalCardProgress(attempt);
+    updateLocalCardProgress(attempt, safeUser);
   } catch (err) {
     console.warn("Could not save attempt to localStorage", err);
   }
 }
 
 /**
- * Update SRS progress in localStorage.
+ * Update SRS progress in user-scoped localStorage.
  */
-export function updateLocalCardProgress(attempt: StudyAttemptRecord): void {
+export function updateLocalCardProgress(attempt: StudyAttemptRecord, userId: string = "guest"): void {
   if (typeof window === "undefined") return;
 
   // Do not count flashcard self-rating as verified objective test attempt
@@ -167,7 +183,9 @@ export function updateLocalCardProgress(attempt: StudyAttemptRecord): void {
     return;
   }
 
-  const key = `${STORAGE_PREFIX}progress_${attempt.setId}`;
+  const safeUser = attempt.userId || userId || "guest";
+  const key = buildLocalProgressKey(safeUser, attempt.setId);
+
   try {
     const raw = localStorage.getItem(key);
     const progressMap: Record<string, LocalCardProgress> = raw ? JSON.parse(raw) : {};
@@ -203,15 +221,100 @@ export function updateLocalCardProgress(attempt: StudyAttemptRecord): void {
 }
 
 /**
- * Get all attempts for a session.
+ * Get all attempts for a session from user-scoped storage.
  */
-export function getLocalSessionAttempts(sessionId: string): StudyAttemptRecord[] {
+export function getLocalSessionAttempts(sessionId: string, userId: string = "guest"): StudyAttemptRecord[] {
   if (typeof window === "undefined") return [];
-  const key = `${STORAGE_PREFIX}attempts_${sessionId}`;
+  const safeUser = userId || "guest";
+  const key = buildLocalAttemptsKey(safeUser, sessionId);
   try {
     const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : [];
+    if (raw) return JSON.parse(raw);
+    // Legacy fallback check
+    const legacyKey = `eva_study_attempts_${sessionId}`;
+    const legacyRaw = localStorage.getItem(legacyKey);
+    return legacyRaw ? JSON.parse(legacyRaw) : [];
   } catch {
     return [];
   }
 }
+
+/**
+ * Initialize or resume a study session on the server (R03 fix).
+ * Gracefully returns null for unauthenticated guests, demo sets, or network failures.
+ */
+export async function initServerSession(
+  setId: string,
+  mode: string
+): Promise<{ sessionId: string; version: number } | null> {
+  if (typeof window === "undefined" || !setId || setId.startsWith("d000")) {
+    return null;
+  }
+
+  try {
+    const res = await fetch("/api/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        setId,
+        mode,
+        action: "resume_or_create",
+      }),
+    });
+
+    if (!res.ok) return null;
+    const json = await res.json();
+    return {
+      sessionId: json.data?.id,
+      version: json.meta?.version || json.data?.state_version || 1,
+    };
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * Sends a graded attempt to the server persistence queue (R03 fix).
+ * Fire-and-forget safe; handles optimistic version tracking.
+ */
+export async function sendServerAttempt(params: {
+  sessionId: string;
+  cardId: string;
+  clientEventId: string;
+  questionKey: string;
+  attemptKind: "answer" | "self_rating" | "game_hit" | "game_miss";
+  answerText: string;
+  activeElapsedMs: number;
+  expectedVersion?: number;
+}): Promise<{ success: boolean; newVersion?: number } | null> {
+  if (typeof window === "undefined" || !params.sessionId) {
+    return null;
+  }
+
+  try {
+    const res = await fetch("/api/attempts", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        sessionId: params.sessionId,
+        cardId: params.cardId,
+        clientEventId: params.clientEventId,
+        questionKey: params.questionKey,
+        attemptKind: params.attemptKind,
+        answerText: params.answerText,
+        activeElapsedMs: params.activeElapsedMs,
+        expectedVersion: params.expectedVersion || 1,
+      }),
+    });
+
+    if (!res.ok) return null;
+    const json = await res.json();
+    return {
+      success: true,
+      newVersion: json.data?.version || json.meta?.version,
+    };
+  } catch {
+    return null;
+  }
+}
+

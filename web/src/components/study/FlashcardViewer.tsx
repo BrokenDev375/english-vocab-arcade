@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -16,7 +16,12 @@ import {
 } from "lucide-react";
 import type { StudyCard } from "@/features/study/question-engine";
 import { shuffle } from "@/features/study/shuffle";
-import { recordLocalAttempt, generateClientEventId } from "@/features/study/study-client-adapter";
+import {
+  recordLocalAttempt,
+  generateClientEventId,
+  initServerSession,
+  sendServerAttempt,
+} from "@/features/study/study-client-adapter";
 
 interface FlashcardViewerProps {
   cards: StudyCard[];
@@ -30,6 +35,19 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
   const [sessionId] = useState(() => `session_fc_${Date.now()}`);
   const [rememberedCount, setRememberedCount] = useState(0);
   const [forgotCount, setForgotCount] = useState(0);
+  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
+
+  useEffect(() => {
+    let ignore = false;
+    void initServerSession(setId, "flashcard").then((sess) => {
+      if (sess && !ignore) {
+        serverSessionRef.current = sess;
+      }
+    });
+    return () => {
+      ignore = true;
+    };
+  }, [setId]);
 
   const currentCard = cards[currentIndex] || cards[0];
 
@@ -70,10 +88,13 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
         setForgotCount((c) => c + 1);
       }
 
+      const clientEventId = generateClientEventId();
+      const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+
       // Record flashcard self-rating attempt (distinguished from verified testing)
       recordLocalAttempt({
-        clientEventId: generateClientEventId(),
-        sessionId,
+        clientEventId,
+        sessionId: effectiveSessionId,
         setId,
         cardId: currentCard.id,
         mode: "flashcard",
@@ -83,6 +104,24 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
         durationMs: 2000,
         answeredAt: new Date().toISOString(),
       });
+
+      if (serverSessionRef.current) {
+        const currentSess = serverSessionRef.current;
+        void sendServerAttempt({
+          sessionId: currentSess.sessionId,
+          cardId: currentCard.id,
+          clientEventId,
+          questionKey: `fc_${currentCard.id}`,
+          attemptKind: "self_rating",
+          answerText: remembered ? "remembered" : "forgot",
+          activeElapsedMs: 2000,
+          expectedVersion: currentSess.version,
+        }).then((res) => {
+          if (res?.newVersion && serverSessionRef.current) {
+            serverSessionRef.current.version = res.newVersion;
+          }
+        });
+      }
 
       handleNext();
     },

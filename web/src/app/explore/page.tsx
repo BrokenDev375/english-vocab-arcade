@@ -15,12 +15,69 @@ import {
   Gamepad2,
 } from "lucide-react";
 
+interface SetItem {
+  id: string;
+  title: string;
+  description: string;
+  cefrLevel: string;
+  topic: string;
+  cardCount: number;
+  isDemo?: boolean;
+}
+
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("ALL");
+  const [realSets, setRealSets] = useState<SetItem[]>([]);
+
+  React.useEffect(() => {
+    async function loadSets() {
+      try {
+        const res = await fetch("/api/sets?scope=explore&pageSize=50");
+        if (res.ok) {
+          const json = await res.json();
+          interface ExploreApiRow {
+            id: string;
+            title: string;
+            description?: string | null;
+            cefr_level?: string | null;
+            topic?: string | null;
+            card_count?: number;
+          }
+          const items: SetItem[] = (json.data || []).map((s: ExploreApiRow) => ({
+            id: s.id,
+            title: s.title,
+            description: s.description || "",
+            cefrLevel: s.cefr_level || "A1",
+            topic: s.topic || "general",
+            cardCount: s.card_count || 0,
+            isDemo: false,
+          }));
+          setRealSets(items);
+        }
+      } catch {
+        // Fallback handled below
+      }
+    }
+    loadSets();
+  }, []);
+
+  const allAvailableSets: SetItem[] = useMemo(() => {
+    if (realSets.length > 0) return realSets;
+    // Fallback to DEMO_SETS only when no real public sets exist
+    return DEMO_SETS.map((s) => ({
+      id: s.id,
+      title: s.title,
+      description: s.description || "",
+      cefrLevel: s.cefrLevel,
+      topic: s.topic,
+      cardCount: s.cardCount,
+      isDemo: true,
+    }));
+  }, [realSets]);
 
   const filteredSets = useMemo(() => {
-    return DEMO_SETS.filter((set) => {
+    return allAvailableSets.filter((set) => {
       const matchSearch =
         set.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
         set.topic.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -32,7 +89,7 @@ export default function ExplorePage() {
 
       return matchSearch && matchLevel;
     });
-  }, [searchQuery, selectedLevel]);
+  }, [allAvailableSets, searchQuery, selectedLevel]);
 
   const levelOptions = [
     { id: "ALL", label: "Tất cả trình độ" },
