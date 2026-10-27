@@ -52,13 +52,13 @@ Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi đi�
 
 ## Thông tin triển khai
 
-- Source commit: Local Ready (branch main, sẵn sàng đẩy remote)
+- Source commit: fbe8f67 (branch main)
 - GitHub repository mới: Chờ chủ dự án tạo repo english-vocab-arcade
 - Supabase project ref mới: Chờ chủ dự án cấp (Local stack: 127.0.0.1:54321)
 - Supabase production URL: Chờ cấu hình
 - Vercel project/team: Chờ import (Root: web)
 - Production stable URL: Chờ cấu hình
-- Deployment commit/build SHA: Sẽ đối chiếu với /api/health khi release
+- Deployment commit/build SHA: fbe8f67 (đối chiếu qua /api/health buildSha)
 - Last production smoke: NOT RUN (Chờ live URL)
 - Gemini model verified: gemini-2.5-flash (fallback gemini-1.5-flash, reports/provider-check.md)
 - Dataset reviewed count: 32 thẻ A1–B1 trong examples/beta-vocabulary.seed.json (reports/content-review.md)
