@@ -50,10 +50,15 @@ export async function listLearningSets(
   let query = supabase
     .from("learning_sets")
     .select(
-      "id, owner_id, title, description, language, cefr_level, topic, is_public, content_revision, created_at, updated_at",
+      "id, owner_id, title, description, language, cefr_level, topic, is_public, content_revision, created_at, updated_at, vocabulary_cards(count)",
       { count: "exact" }
     );
 
+  if (scope === "user") {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) return { sets: [], total: 0 };
+    query = query.eq("owner_id", user.id);
+  }
   if (scope === "explore") {
     query = query.eq("is_public", true);
   }
@@ -81,24 +86,7 @@ export async function listLearningSets(
     return { sets: [], total: count || 0 };
   }
 
-  // Fetch card counts for these sets
-  const setIds = data.map((s) => s.id);
-  const { data: cardsCountData } = await supabase
-    .from("vocabulary_cards")
-    .select("set_id")
-    .in("set_id", setIds);
-
-  const countMap = new Map<string, number>();
-  if (cardsCountData) {
-    for (const card of cardsCountData) {
-      countMap.set(card.set_id, (countMap.get(card.set_id) || 0) + 1);
-    }
-  }
-
-  const sets: SetWithCardCount[] = data.map((item) => ({
-    ...item,
-    card_count: countMap.get(item.id) || 0,
-  }));
+  const sets: SetWithCardCount[] = data.map(({ vocabulary_cards, ...item }) => ({ ...item, card_count: vocabulary_cards[0]?.count || 0 }));
 
   return { sets, total: count || 0 };
 }

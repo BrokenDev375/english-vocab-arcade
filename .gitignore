@@ -30,3 +30,8 @@ supabase/.branches/
 .envrc
 .DS_Store
 Thumbs.db
+
+# Browser verification artifacts may contain local session cookies.
+web/test-results/
+web/playwright-report/
+web/.env.e2e.local

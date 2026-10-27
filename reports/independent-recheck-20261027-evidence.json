@@ -1,0 +1,146 @@
+{
+    "date":  "2026-10-27",
+    "commit":  "abb35fa",
+    "checks":  [
+                   {
+                       "test":  "Explicit user-scoped write and cleanup",
+                       "remainingKeys":  [
+
+                                         ]
+                   },
+                   {
+                       "test":  "UI-style call without userId then logout cleanup",
+                       "remainingKeys":  [
+                                             "eva:v1:guest:attempts:audit-ui-session",
+                                             "eva:v1:guest:progress:audit-shared-set"
+                                         ],
+                       "defaultBucketAttempts":  1
+                   },
+                   {
+                       "test":  "Pagination page 2 HTTP500",
+                       "pageCalls":  2,
+                       "returnedCards":  1,
+                       "thrownError":  null
+                   },
+                   {
+                       "test":  "Resume adapter discards persisted state",
+                       "receivedStateIndex":  8,
+                       "returnedAdapterData":  {
+                                                   "sessionId":  "audit-server-session",
+                                                   "version":  7
+                                               }
+                   },
+                   {
+                       "test":  "Attempt persistence HTTP503",
+                       "adapterResult":  null
+                   },
+                   {
+                       "test":  "Replay identical engine event through actual dispatcher",
+                       "handlerExtractions":  "TypeScript AST, browser not involved",
+                       "engineEventCount":  1,
+                       "persistedRecordCount":  2,
+                       "uniqueRecordIds":  2,
+                       "playedSounds":  2
+                   },
+                   {
+                       "test":  "AI incomplete context coverage",
+                       "success":  false,
+                       "errorCode":  "PARSE_ERROR"
+                   },
+                   {
+                       "test":  "AI reading invented card ID",
+                       "success":  false,
+                       "errorCode":  "PARSE_ERROR"
+                   },
+                   {
+                       "test":  "AI disabled without injected provider",
+                       "success":  false,
+                       "errorCode":  "AI_DISABLED",
+                       "realProviderCalls":  0
+                   },
+                   {
+                       "test":  "Repository denies new session for private foreign set",
+                       "error":  "NOT_FOUND: Learning set not found or private"
+                   },
+                   {
+                       "test":  "Server snapshot beyond 1000 cards",
+                       "expectedCards":  1001,
+                       "actualCards":  1001
+                   },
+                   {
+                       "test":  "Reject outside-card and incorrect game hit",
+                       "outsideCode":  "INVALID_CARD_MEMBERSHIP",
+                       "wrongCode":  "INVALID_ANSWER"
+                   },
+                   {
+                       "test":  "Two concurrent attempts using current client version strategy",
+                       "attempts":  [
+                                        {
+                                            "success":  true,
+                                            "version":  1
+                                        },
+                                        {
+                                            "success":  true,
+                                            "version":  1
+                                        }
+                                    ]
+                   },
+                   {
+                       "test":  "Session state after persisted attempts",
+                       "state":  {
+                                     "settings":  {
+
+                                                  },
+                                     "stageIndex":  0
+                                 },
+                       "status":  "active",
+                       "version":  1,
+                       "activeElapsedMs":  0
+                   },
+                   {
+                       "test":  "Reject attempt after completed session",
+                       "code":  "SESSION_TERMINATED"
+                   },
+                   {
+                       "test":  "Failed-batch retries with daily=1 and minute=1",
+                       "reserveStatuses":  [
+                                               "lease_acquired",
+                                               "lease_acquired",
+                                               "lease_acquired",
+                                               "lease_acquired"
+                                           ],
+                       "usage":  {
+                                     "reserved_operations":  1,
+                                     "reserved_calls":  0
+                                 },
+                       "realProviderCalls":  0
+                   },
+                   {
+                       "test":  "Finalize failure is not reported ready",
+                       "finalizeWasCalled":  true,
+                       "status":  "failed",
+                       "code":  "INVALID_LEASE"
+                   },
+                   {
+                       "test":  "CI private key grep pattern execution",
+                       "grepExitCode":  2,
+                       "scannerErrored":  true,
+                       "shellNegationWouldPass":  true,
+                       "stderr":  "grep: unknown option -- ---BEGIN (RSA |EC )?PRIVATE KEY-----\nUsage: grep [OPTION]... PATTERN [FILE]...\nTry \u0027grep --help\u0027 for more information."
+                   }
+               ],
+    "realGeminiCalls":  0,
+    "fixtureUsersCreated":  2,
+    "fixtureCleanupCompleted":  true,
+    "browserE2E":  "not run; current production build fails",
+    "httpRouteRetest":  "not run against stale build",
+    "verification":  {
+                         "handoff":  "PASS: 44 files, 23 tickets, 14 phases, 10 sample cards",
+                         "lint":  "PASS",
+                         "typecheck":  "PASS: tsc --noEmit --incremental false",
+                         "unit":  "PASS: 101 tests / 12 files",
+                         "integration":  "PASS: 43 tests / 9 files",
+                         "productionBuild":  "FAIL exit 1: src/proxy.ts: Proxy is missing expected function export name",
+                         "sourceWorkingTree":  "clean at start; main ahead origin/main 1 commit"
+                     }
+}

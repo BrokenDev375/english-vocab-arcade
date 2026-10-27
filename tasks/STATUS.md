@@ -6,18 +6,18 @@ Cập nhật ban đầu: 26/10/2026.
 
 Đã chuyển từ thư mục LTM ngày 26/10/2026 và cập nhật đường dẫn bàn giao. Trạng thái triển khai ứng dụng không thay đổi.
 
-## Hiện trạng đã xác minh
+## Hiện trạng đã xác minh — cập nhật 27/10/2026
 
-- [x] Xác định folder dự án mới và nguồn code tham khảo.
-- [x] Lập hồ sơ kế hoạch, đặc tả, runbook và prompt bàn giao.
-- [x] Bootstrap app trong web/.
-- [ ] Khởi tạo repository Git mới.
-- [ ] Tạo Supabase project tiếng Anh mới.
-- [ ] Tạo Vercel project tiếng Anh mới.
-- [ ] Chạy test ứng dụng thật.
-- [ ] Deploy và production smoke.
+- [x] Kế hoạch, đặc tả và runbook bàn giao.
+- [x] Repository Git local và origin cấu hình; baseline abb35fa.
+- [x] 5 migrations áp dụng vào Supabase local, không reset và không sửa migration cũ.
+- [x] Lint/TypeScript, 114 unit, 46 integration, build và 15 browser E2E PASS.
+- [x] Sửa F01–F08; xem [nghiệm thu](../reports/fix-verification-20261027.md) và [evidence](../reports/fix-verification-20261027-evidence.json).
+- [ ] Xác minh GitHub Actions remote sau push.
+- [ ] Supabase/Vercel production và smoke trên URL thật.
+- [ ] Provider Gemini thật, thiết bị âm thanh/mobile thật, học liệu public beta >=300 thẻ và duyệt độc lập.
 
-Các checkbox hoàn thành ở trên chỉ nói về hồ sơ kế hoạch và bootstrap đã làm, không nói ứng dụng đã deploy hoàn tất.
+Các log phía dưới là lịch sử. Kiểm thử local không thay thế các bằng chứng production.
 
 ## Ticket
 
@@ -41,10 +41,10 @@ Các checkbox hoàn thành ở trên chỉ nói về hồ sơ kế hoạch và b
 | T15 | DONE | Persistent SHA-256 AI cache, atomic lease RPCs, daily/minute quota limits, /api/ai/batches and [id] routes, E07 & D11 passed; 38 integration tests pass |
 | T16 | DONE | English exercises (grammar unscramble, reading comprehension, contextual translation), zero HSK/pinyin, acceptedTokenOrders & reference matching; 4 unit tests + 34 routes compiled |
 | T17 | DONE | Speech adapter (TTS 1.0x/0.75x, Web Speech STT, token grading, substring rejection, keyboard fallback), /dictation and /speak routes; 6 unit tests + 36 routes compiled |
-| T18 | DONE | 32 reviewed A1-B1 cards in examples/beta-vocabulary.seed.json, full manifest, SHA-256 integrity hash, reports/content-review.md; 4 unit tests + check-handoff pass |
-| T19 | DONE | CI workflow .github/workflows/ci.yml, secret scan, 135/135 tests pass (97 unit + 38 integration), 36 routes build cleanly, reports/phase-P11.md |
-| T20 | BLOCKED | Chờ tạo project Supabase production tiếng Anh & link CLI/db push; toàn bộ 4 migrations & seed CLI đã sẵn sàng và kiểm thử tại local |
-| T21 | BLOCKED | Chờ tạo repo GitHub english-vocab-arcade & import Vercel; git local đã commit, CI workflow .github/workflows/ci.yml đã sẵn sàng |
+| T18 | UNVERIFIED | 32 cards for internal smoke tests only; public beta requires >=300 cards and independent content review. Metadata/hash tests do not verify linguistic accuracy. |
+| T19 | UNVERIFIED | Local gates PASS: 114 unit, 46 integration, 15 browser E2E, build, scanner; CI workflow updated. GitHub Actions remote not executed in this fix. |
+| T20 | BLOCKED | Production Supabase project/link/db push not verified; all 5 migrations tested locally. No remote reset or migration performed. |
+| T21 | DOING | User requested GitHub push to origin/main on 27/10/2026; local verification complete. Vercel deployment/Ready remains UNVERIFIED. |
 | T22 | UNVERIFIED | Chờ deploy URL production để thực hiện smoke test thực tế; release checklist đã lập tại reports/release-v1.md |
 
 Status hợp lệ: TODO, DOING, DONE, BLOCKED, UNVERIFIED.
@@ -52,7 +52,7 @@ Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi đi�
 
 ## Thông tin triển khai
 
-- Source commit: fbe8f67 (branch main)
+- Source baseline: abb35fa (branch main) + working-tree fixes verified 27/10/2026; not committed/pushed in this fix.
 - GitHub repository mới: Chờ chủ dự án tạo repo english-vocab-arcade
 - Supabase project ref mới: Chờ chủ dự án cấp (Local stack: 127.0.0.1:54321)
 - Supabase production URL: Chờ cấu hình
@@ -61,7 +61,7 @@ Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi đi�
 - Deployment commit/build SHA: fbe8f67 (đối chiếu qua /api/health buildSha)
 - Last production smoke: NOT RUN (Chờ live URL)
 - Gemini model verified: gemini-2.5-flash (fallback gemini-1.5-flash, reports/provider-check.md)
-- Dataset reviewed count: 32 thẻ A1–B1 trong examples/beta-vocabulary.seed.json (reports/content-review.md)
+- Dataset internal/smoke count: 32 thẻ; kiểm duyệt ngôn ngữ độc lập và bộ public beta >=300 thẻ chưa xác minh.
 
 ## Nhật ký lượt triển khai
 
@@ -730,3 +730,17 @@ Blocker còn lại:
 - T22: Chờ URL production để thực hiện smoke test live.
 Ticket tiếp theo: Tiến hành triển khai cloud khi chủ dự án bàn giao thông tin hosting/repository.
 ~~~
+
+## Tái kiểm tra độc lập bản sửa abb35fa — 27/10/2026
+
+Lint, TypeScript, 101 unit tests và 43 integration tests PASS. Tuy nhiên `npm run build` FAIL (exit 1): `src/proxy.ts` export middleware thay vì proxy/default. Chưa nghiệm thu bản sửa R01–R13 hoặc chuyển thẳng sang production: còn thiếu resume/state/completed và queue retry, UI localStorage vẫn dùng guest, Arcade còn giới hạn 500 cards/fallback demo, retry batch failed vượt rate limit/cooldown, event dispatcher chưa dedupe theo engine ID, private-key scan CI nuốt lỗi. Server snapshot 1.001 cards và các negative probes phân quyền/card membership/finalize/AI coverage đã có tiến bộ được xác nhận. Xem [báo cáo tái kiểm tra](../reports/independent-recheck-20261027.md) và [bằng chứng](../reports/independent-recheck-20261027-evidence.json). Kết quả build PASS trong log lần sửa trước không tái hiện được ở source này. Review chỉ thêm tài liệu, không sửa ứng dụng/migration, không push/deploy; fixture local đã được dọn, không gọi Gemini thật.
+
+
+## Hoàn tất sửa F01–F08 — 27/10/2026
+
+Đã sửa code và chạy kiểm tra thực: lint/typecheck PASS; 114 unit/16 files PASS; 46 integration/10 files PASS; production build PASS; 15 Edge headless E2E PASS; 2 scanner self-tests và scanner/handoff/diff PASS. Browser xác minh cả typing/recall, 1.001 thẻ, mất mạng/reload/logout, các mode học và auth recovery/refresh. Migration 0005 áp dụng local; 0001–0004 giữ nguyên. Không gọi Gemini thật, không push/deploy; T18/T19/T21/T22 giữ các phần chưa xác minh theo bảng. Chi tiết và giới hạn tại [báo cáo](../reports/fix-verification-20261027.md).
+
+
+## Yêu cầu push GitHub — 27/10/2026
+
+Chủ dự án đã yêu cầu commit/push toàn bộ bản sửa đã nghiệm thu lên `https://github.com/BrokenDev375/english-vocab-arcade`, nhánh `main`. Trước commit đã fetch origin, xác nhận không có commit remote cần tích hợp, quét secret và kiểm tra diff. Báo cáo/evidence nghiệm thu bên trên là snapshot của lượt sửa local trước yêu cầu push; không suy ra trạng thái Vercel hoặc production từ việc push code.

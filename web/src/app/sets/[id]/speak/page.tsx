@@ -1,6 +1,10 @@
 "use client";
+import { useElapsedTime } from "@/features/study/use-elapsed-time";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useStudySession } from "@/features/study/use-study-session";
+import { SyncNotice } from "@/components/study/SyncNotice";
+
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
@@ -18,10 +22,8 @@ import {
 } from "@/features/audio/speech-adapter";
 import { fetchAllSetCards } from "@/features/sets/sets-client";
 import {
-  recordLocalAttempt,
   generateClientEventId,
-  initServerSession,
-  sendServerAttempt,
+  type StudyAttemptRecord,
 } from "@/features/study/study-client-adapter";
 import {
   ArrowLeft,
@@ -83,7 +85,6 @@ function SpeakContent() {
   const [typedAnswer, setTypedAnswer] = useState("");
   const [micError, setMicError] = useState<string | null>(null);
   const [sessionId] = useState(() => `session_spk_${Date.now()}`);
-  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -141,11 +142,6 @@ function SpeakContent() {
           }))
         );
 
-        void initServerSession(setId, "speak").then((sess) => {
-          if (sess && !ignore) {
-            serverSessionRef.current = sess;
-          }
-        });
       } catch (err: unknown) {
         if (ignore) return;
         const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
@@ -166,12 +162,15 @@ function SpeakContent() {
     };
   }, [setId]);
 
+  const persistence = useStudySession(setId, "speak", { cards, currentIndex, transcript, evalResult, useKeyboardFallback, typedAnswer }, v => { if (Array.isArray(v.cards)) setCards(v.cards as StudyCard[]); setCurrentIndex(Number(v.currentIndex)||0); setTranscript(String(v.transcript||"")); setEvalResult(v.evalResult as SpeechGradeResult|null); setUseKeyboardFallback(Boolean(v.useKeyboardFallback)); setTypedAnswer(String(v.typedAnswer||"")); }, !loading && !error && cards.length > 0, currentIndex === cards.length-1 && !!evalResult ? "completed" : "active");
+  const elapsedTime = useElapsedTime(currentIndex, persistence.ready);
+  const recordLocalAttempt = (attempt: StudyAttemptRecord) => persistence.record(attempt);
   const currentCard = cards[currentIndex] || cards[0];
 
   const recordAttempt = (text: string, isMatch: boolean) => {
     if (!currentCard) return;
     const clientEventId = generateClientEventId();
-    const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+    const effectiveSessionId = sessionId;
 
     recordLocalAttempt({
       clientEventId,
@@ -182,27 +181,10 @@ function SpeakContent() {
       questionType: "type_in",
       userAnswer: text,
       isCorrect: isMatch,
-      durationMs: 3500,
+      durationMs: elapsedTime(),
       answeredAt: new Date().toISOString(),
     });
 
-    if (serverSessionRef.current) {
-      const currentSess = serverSessionRef.current;
-      void sendServerAttempt({
-        sessionId: currentSess.sessionId,
-        cardId: currentCard.id,
-        clientEventId,
-        questionKey: `spk_${currentCard.id}`,
-        attemptKind: "answer",
-        answerText: text,
-        activeElapsedMs: 3500,
-        expectedVersion: currentSess.version,
-      }).then((res) => {
-        if (res?.newVersion && serverSessionRef.current) {
-          serverSessionRef.current.version = res.newVersion;
-        }
-      });
-    }
   };
 
   const handlePlaySample = () => {
@@ -295,9 +277,10 @@ function SpeakContent() {
     }
   };
 
-  if (loading) {
+  if (loading || !persistence.ready) {
     return (
       <AppShell>
+        <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
         <LoadingState message="Đang chuẩn bị phòng luyện phát âm..." />
       </AppShell>
     );
@@ -323,6 +306,7 @@ function SpeakContent() {
 
   return (
     <AppShell>
+      <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
       <div className="max-w-xl mx-auto space-y-6">
         {/* Navigation header */}
         <div className="flex items-center justify-between">
@@ -528,11 +512,11 @@ function SpeakContent() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
+                      onClick={() => { void persistence.restart(() => {
                         setCurrentIndex(0);
                         setTranscript("");
                         setEvalResult(null);
-                      }}
+ }); }}
                     >
                       Luyện lại
                     </Button>

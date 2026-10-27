@@ -1,4 +1,6 @@
 import "server-only";
+import { gradeSpeechTranscript } from "@/features/audio/speech-adapter";
+import { GrammarOutputSchema, ReadingOutputSchema, TranslationOutputSchema } from "@/features/ai/schemas";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin.server";
 import { isAnswerCorrect } from "./answer-normalization";
 
@@ -52,6 +54,22 @@ export async function createOrResumeSession(
   const { userId, setId, mode, action = "resume_or_create", settings = {} } = params;
   const adminClient = getSupabaseAdminClient();
 
+  // 3. Fetch set metadata and verify visibility
+  const { data: setRow, error: setError } = await adminClient
+    .from("learning_sets")
+    .select("id, owner_id, is_public, content_revision")
+    .eq("id", setId)
+    .maybeSingle();
+
+  if (setError || !setRow) {
+    throw new Error("NOT_FOUND: Learning set not found");
+  }
+
+  // Enforce visibility: only owner or public sets can have study sessions created
+  if (!setRow.is_public && setRow.owner_id !== userId) {
+    throw new Error("NOT_FOUND: Learning set not found or private");
+  }
+
   // 1. If action is resume_or_create, check for existing active or paused session
   if (action === "resume_or_create") {
     const { data: existing } = await adminClient
@@ -79,22 +97,6 @@ export async function createOrResumeSession(
       .in("status", ["active", "paused"]);
   }
 
-  // 3. Fetch set metadata and verify visibility
-  const { data: setRow, error: setError } = await adminClient
-    .from("learning_sets")
-    .select("id, owner_id, is_public, content_revision")
-    .eq("id", setId)
-    .maybeSingle();
-
-  if (setError || !setRow) {
-    throw new Error("NOT_FOUND: Learning set not found");
-  }
-
-  // Enforce visibility: only owner or public sets can have study sessions created
-  if (!setRow.is_public && setRow.owner_id !== userId) {
-    throw new Error("NOT_FOUND: Learning set not found or private");
-  }
-
   // Fetch all cards with pagination loop to support sets > 1,000 cards
   const allCards: Array<{
     id: string;
@@ -113,7 +115,7 @@ export async function createOrResumeSession(
       .from("vocabulary_cards")
       .select("id, term, meaning_vi, part_of_speech, accepted_answers, ipa, position")
       .eq("set_id", setId)
-      .order("position", { ascending: true })
+      .order("position", { ascending: true }).order("id", { ascending: true })
       .range(from, from + CHUNK_SIZE - 1);
 
     if (cardsError) {
@@ -162,6 +164,10 @@ export async function createOrResumeSession(
     .select("*")
     .single();
 
+  if (insertError?.code === "23505") {
+    const { data: concurrent } = await adminClient.from("study_sessions").select("*").eq("user_id", userId).eq("set_id", setId).eq("mode", mode).in("status", ["active", "paused"]).maybeSingle();
+    if (concurrent) return { session: concurrent as unknown as SessionRecord, isNew: false };
+  }
   if (insertError || !newSession) {
     throw new Error(insertError?.message || "Failed to create study session");
   }
@@ -282,7 +288,7 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
   // 1. Fetch session snapshot to grade server-side
   const { data: session } = await adminClient
     .from("study_sessions")
-    .select("user_id, status, mode, content_snapshot, state_version")
+    .select("user_id, set_id, status, mode, content_snapshot, state_version")
     .eq("id", sessionId)
     .maybeSingle();
 
@@ -356,6 +362,31 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
     }
     isCorrect = false;
     gradeSource = "rule";
+  } else if (session.mode === "speak") {
+    isCorrect = gradeSpeechTranscript(userAnswer, targetCard.term, targetCard.accepted_answers || []).isMatch;
+  } else if (["grammar", "reading", "translate"].includes(session.mode)) {
+    const key = /^ai:([0-9a-f-]{36}):(\d+)$/i.exec(questionKey);
+    if (!key) return { success: false, code: "INVALID_ANSWER", error: "Thiếu bài tập tham chiếu." };
+    const { data: batch } = await adminClient.from("ai_batches").select("output,mode")
+      .eq("id", key[1]).eq("user_id", userId).eq("set_id", session.set_id!).eq("status", "ready").maybeSingle();
+    if (!batch || batch.mode !== (session.mode === "translate" ? "translation" : session.mode)) return { success: false, code: "INVALID_ANSWER", error: "Bài tập không thuộc phiên học." };
+    const index = Number(key[2]);
+    if (session.mode === "grammar") {
+      const parsed = GrammarOutputSchema.safeParse(batch.output);
+      const ex = parsed.success ? parsed.data.exercises[index] : null;
+      if (!ex || ex.cardId !== cardId) return { success: false, code: "INVALID_CARD_MEMBERSHIP" };
+      isCorrect = [ex.tokens, ...ex.acceptedTokenOrders].some(order => order.join(" ") === userAnswer) || ex.sentenceEn === userAnswer;
+    } else if (session.mode === "translate") {
+      const parsed = TranslationOutputSchema.safeParse(batch.output);
+      const ex = parsed.success ? parsed.data.exercises[index] : null;
+      if (!ex || ex.cardId !== cardId) return { success: false, code: "INVALID_CARD_MEMBERSHIP" };
+      isCorrect = isAnswerCorrect(userAnswer, ex.referenceEn, ex.acceptedAnswers);
+    } else {
+      const parsed = ReadingOutputSchema.safeParse(batch.output);
+      const question = parsed.success ? parsed.data.questions[index] : null;
+      if (!question || !parsed.success || !parsed.data.usedCardIds.includes(cardId)) return { success: false, code: "INVALID_CARD_MEMBERSHIP" };
+      isCorrect = userAnswer === String(question.correctIndex);
+    }
   } else {
     isCorrect = isAnswerCorrect(
       userAnswer,

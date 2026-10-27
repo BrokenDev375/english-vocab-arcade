@@ -1,10 +1,12 @@
+import { getRequestOrigin } from "@/lib/origin";
 import { NextResponse } from "next/server";
 import { type EmailOtpType } from "@supabase/supabase-js";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 import { getSafeRedirectUrl } from "@/lib/safe-redirect";
 
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
+  const origin = getRequestOrigin(request);
   const token_hash = searchParams.get("token_hash");
   const type = searchParams.get("type") as EmailOtpType | null;
   const next = searchParams.get("next");
@@ -12,6 +14,12 @@ export async function GET(request: Request) {
   const fallbackRedirect = type === "recovery" ? "/reset-password" : "/dashboard";
   const safeTarget = getSafeRedirectUrl(next, fallbackRedirect);
 
+  const code = searchParams.get("code");
+  if (code) {
+    const supabase = await createSupabaseServerClient();
+    const { error } = await supabase.auth.exchangeCodeForSession(code);
+    if (!error) return NextResponse.redirect(`${origin}${safeTarget}`);
+  }
   if (token_hash && type) {
     const supabase = await createSupabaseServerClient();
     const { error } = await supabase.auth.verifyOtp({

@@ -14,6 +14,8 @@ describe("T04 - Auth SSR & Safe Redirect Helper", () => {
     expect(getSafeRedirectUrl("https://evil.example.com")).toBe("/dashboard");
     expect(getSafeRedirectUrl("http://attacker.com")).toBe("/dashboard");
     expect(getSafeRedirectUrl("//evil.example.com")).toBe("/dashboard");
+    expect(getSafeRedirectUrl("/\n/evil.example.com")).toBe("/dashboard");
+    expect(getSafeRedirectUrl("/\r/evil.example.com")).toBe("/dashboard");
     expect(getSafeRedirectUrl("/\\evil.example.com")).toBe("/dashboard");
     expect(getSafeRedirectUrl("javascript:alert(1)")).toBe("/dashboard");
     expect(getSafeRedirectUrl("data:text/html,<script>alert(1)</script>")).toBe("/dashboard");

@@ -1,12 +1,28 @@
 "use client";
 
+import { flushStudySessions } from "@/features/study/session-sync";
+import { useStudyIdentity } from "@/components/auth/AuthProvider";
+import { clearUserLocalData } from "@/features/study/study-client-adapter";
+import { getSupabaseBrowserClient } from "@/lib/supabase/browser";
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { Gamepad2, Compass, LayoutDashboard, Menu, X, BookOpen, LogIn, UserPlus } from "lucide-react";
 
 export const Navbar: React.FC = () => {
   const pathname = usePathname();
+  const router = useRouter();
+  const identity = useStudyIdentity();
+  const [logoutError, setLogoutError] = useState<string | null>(null);
+  const logout = async () => {
+    if (!await flushStudySessions()) { setLogoutError("Tiến độ chưa đồng bộ xong. Hãy kiểm tra kết nối rồi đăng xuất lại."); return; }
+    const response = await fetch("/api/auth/logout", { method: "POST" }).catch(() => null);
+    if (!response?.ok) { setLogoutError("Chưa đăng xuất được. Hãy thử lại."); return; }
+    window.dispatchEvent(new Event("eva-auth-leaving"));
+    clearUserLocalData(identity.userId);
+    await getSupabaseBrowserClient().auth.signOut({ scope: "local" });
+    router.push("/login"); router.refresh();
+  };
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const navLinks = [
@@ -67,6 +83,7 @@ export const Navbar: React.FC = () => {
 
           {/* Desktop Auth CTAs */}
           <div className="hidden md:flex items-center gap-2.5">
+            {identity.userId !== "guest" ? <button onClick={() => { void logout(); }}>Đăng xuất</button> : <>
             <Link
               href="/login"
               className="inline-flex items-center gap-1.5 px-3.5 py-2 text-sm font-medium text-zinc-700 dark:text-zinc-300 hover:text-zinc-950 dark:hover:text-white rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
@@ -81,6 +98,7 @@ export const Navbar: React.FC = () => {
               <UserPlus className="w-4 h-4" />
               <span>Bắt đầu học</span>
             </Link>
+            </>}
           </div>
 
           {/* Mobile menu button */}
@@ -121,6 +139,7 @@ export const Navbar: React.FC = () => {
             );
           })}
           <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex flex-col gap-2">
+            {identity.userId !== "guest" ? <button onClick={() => { void logout(); }}>Đăng xuất</button> : <>
             <Link
               href="/login"
               onClick={() => setMobileMenuOpen(false)}
@@ -137,9 +156,11 @@ export const Navbar: React.FC = () => {
               <UserPlus className="w-4 h-4" />
               <span>Đăng ký miễn phí</span>
             </Link>
+            </>}
           </div>
         </div>
       )}
+      {logoutError && <p role="alert">{logoutError}</p>}
     </header>
   );
 };

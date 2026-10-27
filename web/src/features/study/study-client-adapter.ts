@@ -179,7 +179,7 @@ export function updateLocalCardProgress(attempt: StudyAttemptRecord, userId: str
   if (typeof window === "undefined") return;
 
   // Do not count flashcard self-rating as verified objective test attempt
-  if (attempt.questionType === "flashcard_self_rate") {
+  if (attempt.questionType === "flashcard_self_rate" || attempt.questionType === "arcade_typing") {
     return;
   }
 
@@ -230,91 +230,9 @@ export function getLocalSessionAttempts(sessionId: string, userId: string = "gue
   try {
     const raw = localStorage.getItem(key);
     if (raw) return JSON.parse(raw);
-    // Legacy fallback check
-    const legacyKey = `eva_study_attempts_${sessionId}`;
-    const legacyRaw = localStorage.getItem(legacyKey);
-    return legacyRaw ? JSON.parse(legacyRaw) : [];
+    return [];
   } catch {
     return [];
-  }
-}
-
-/**
- * Initialize or resume a study session on the server (R03 fix).
- * Gracefully returns null for unauthenticated guests, demo sets, or network failures.
- */
-export async function initServerSession(
-  setId: string,
-  mode: string
-): Promise<{ sessionId: string; version: number } | null> {
-  if (typeof window === "undefined" || !setId || setId.startsWith("d000")) {
-    return null;
-  }
-
-  try {
-    const res = await fetch("/api/sessions", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        setId,
-        mode,
-        action: "resume_or_create",
-      }),
-    });
-
-    if (!res.ok) return null;
-    const json = await res.json();
-    return {
-      sessionId: json.data?.id,
-      version: json.meta?.version || json.data?.state_version || 1,
-    };
-  } catch {
-    return null;
-  }
-}
-
-/**
- * Sends a graded attempt to the server persistence queue (R03 fix).
- * Fire-and-forget safe; handles optimistic version tracking.
- */
-export async function sendServerAttempt(params: {
-  sessionId: string;
-  cardId: string;
-  clientEventId: string;
-  questionKey: string;
-  attemptKind: "answer" | "self_rating" | "game_hit" | "game_miss";
-  answerText: string;
-  activeElapsedMs: number;
-  expectedVersion?: number;
-}): Promise<{ success: boolean; newVersion?: number } | null> {
-  if (typeof window === "undefined" || !params.sessionId) {
-    return null;
-  }
-
-  try {
-    const res = await fetch("/api/attempts", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        sessionId: params.sessionId,
-        cardId: params.cardId,
-        clientEventId: params.clientEventId,
-        questionKey: params.questionKey,
-        attemptKind: params.attemptKind,
-        answerText: params.answerText,
-        activeElapsedMs: params.activeElapsedMs,
-        expectedVersion: params.expectedVersion || 1,
-      }),
-    });
-
-    if (!res.ok) return null;
-    const json = await res.json();
-    return {
-      success: true,
-      newVersion: json.data?.version || json.meta?.version,
-    };
-  } catch {
-    return null;
   }
 }
 

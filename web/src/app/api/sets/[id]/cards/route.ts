@@ -39,6 +39,9 @@ export async function GET(request: Request, { params }: RouteParams) {
       cursorPositionParam !== null ? parseInt(cursorPositionParam, 10) : undefined;
 
     const supabase = await createSupabaseServerClient();
+    const { data: visibleSet, error: setError } = await supabase.from("learning_sets").select("id").eq("id", id).maybeSingle();
+    if (setError) throw new Error("Không xác minh được học phần. Hãy thử lại.");
+    if (!visibleSet) return NextResponse.json({ error: "Không tìm thấy học phần hoặc bạn không có quyền truy cập." }, { status: 404 });
     const result = await listSetCards(supabase, id, {
       cursorPosition,
       cursorId,

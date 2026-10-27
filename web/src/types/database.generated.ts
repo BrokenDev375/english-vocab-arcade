@@ -229,6 +229,7 @@ isOneToOne: false
             [_ in never]: never
           }
           Functions: {
+            reserve_ai_provider_call_v1: { Args: { p_user_id: string; p_global_daily_limit?: number; p_global_minute_limit?: number; p_user_daily_limit?: number }; Returns: Json },
             "finalize_ai_batch_v1":
 { Args: { "p_batch_id": string,"p_error_code"?: string,"p_lease_token": string,"p_model_id"?: string,"p_output"?: Json,"p_status": string }; Returns: Json
                            },

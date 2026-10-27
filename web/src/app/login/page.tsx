@@ -38,9 +38,10 @@ function LoginForm() {
       const data = await res.json();
 
       if (!res.ok) {
-        throw new Error(data.error || "Đăng nhập không thành công");
+        throw new Error((typeof data.error === "string" ? data.error : data.error?.message) || "Đăng nhập không thành công");
       }
 
+      window.dispatchEvent(new Event("eva-auth-changed"));
       router.push(data.redirectTo || "/dashboard");
       router.refresh();
     } catch (err: unknown) {

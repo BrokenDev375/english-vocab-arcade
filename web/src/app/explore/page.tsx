@@ -7,7 +7,7 @@ import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { EmptyState } from "@/components/ui/EmptyState";
-import { DEMO_SETS } from "@/data/demo/vocabulary.demo";
+
 import {
   Compass,
   Search,
@@ -28,12 +28,14 @@ interface SetItem {
 export default function ExplorePage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedLevel, setSelectedLevel] = useState<string>("ALL");
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [realSets, setRealSets] = useState<SetItem[]>([]);
 
   React.useEffect(() => {
     async function loadSets() {
       try {
         const res = await fetch("/api/sets?scope=explore&pageSize=50");
+        if (!res.ok) throw new Error("Không tải được danh sách học phần.");
         if (res.ok) {
           const json = await res.json();
           interface ExploreApiRow {
@@ -55,26 +57,12 @@ export default function ExplorePage() {
           }));
           setRealSets(items);
         }
-      } catch {
-        // Fallback handled below
-      }
+      } catch { setLoadError("Không tải được danh sách học phần. Vui lòng thử lại."); }
     }
     loadSets();
   }, []);
 
-  const allAvailableSets: SetItem[] = useMemo(() => {
-    if (realSets.length > 0) return realSets;
-    // Fallback to DEMO_SETS only when no real public sets exist
-    return DEMO_SETS.map((s) => ({
-      id: s.id,
-      title: s.title,
-      description: s.description || "",
-      cefrLevel: s.cefrLevel,
-      topic: s.topic,
-      cardCount: s.cardCount,
-      isDemo: true,
-    }));
-  }, [realSets]);
+  const allAvailableSets = realSets;
 
   const filteredSets = useMemo(() => {
     return allAvailableSets.filter((set) => {
@@ -120,6 +108,7 @@ export default function ExplorePage() {
           </p>
         </div>
 
+        {loadError && <p role="alert">{loadError} <button onClick={() => window.location.reload()}>Thử lại</button></p>}
         {/* Search & Filter Bar */}
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
           <div className="relative flex-1">

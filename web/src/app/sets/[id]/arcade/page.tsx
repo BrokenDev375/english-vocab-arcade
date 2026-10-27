@@ -7,6 +7,7 @@ import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { ArcadeClient } from "@/components/arcade/ArcadeClient";
 import { DEMO_SETS, DEMO_CARDS } from "@/data/demo/vocabulary.demo";
+import { fetchAllSetCards } from "@/features/sets/sets-client";
 import type { LearningSet, VocabularyCard } from "@/contracts/vocabulary";
 
 function ArcadePageContent() {
@@ -33,64 +34,13 @@ function ArcadePageContent() {
 
       // 2. Fetch from API
       try {
-        const [setRes, cardsRes] = await Promise.all([
-          fetch(`/api/sets/${id}`),
-          fetch(`/api/sets/${id}/cards?limit=500`),
-        ]);
-
+        const [setRes, fetchedCards] = await Promise.all([fetch(`/api/sets/${id}`), fetchAllSetCards(id)]);
         if (ignore) return;
-
-        let loadedSet: LearningSet = DEMO_SETS[0];
-        if (setRes.ok) {
-          const setData = await setRes.json();
-          loadedSet = {
-            id: setData.data.id,
-            title: setData.data.title,
-            description: setData.data.description,
-            language: "en",
-            cefrLevel: setData.data.cefr_level || "mixed",
-            topic: setData.data.topic || "general",
-            isPublic: setData.data.is_public,
-            cardCount: setData.data.card_count || 0,
-            createdAt: setData.data.created_at,
-            updatedAt: setData.data.updated_at,
-          };
-        }
-        setCurrentSet(loadedSet);
-
-        if (cardsRes.ok) {
-          const cardsData = await cardsRes.json();
-          if (cardsData.data && cardsData.data.length > 0) {
-            interface ApiCard {
-              id: string;
-              term: string;
-              meaning_vi: string;
-              part_of_speech?: string | null;
-              cefr_level?: "A1" | "A2" | "B1" | null;
-              ipa?: string | null;
-              example_en?: string | null;
-              example_vi?: string | null;
-              accepted_answers?: string[] | null;
-            }
-            setCards(
-              cardsData.data.map((c: ApiCard) => ({
-                id: c.id,
-                term: c.term,
-                meaningVi: c.meaning_vi,
-                partOfSpeech: (c.part_of_speech as VocabularyCard["partOfSpeech"]) || "noun",
-                cefrLevel: c.cefr_level || undefined,
-                ipa: c.ipa || undefined,
-                exampleEn: c.example_en || undefined,
-                exampleVi: c.example_vi || undefined,
-                acceptedAnswers: c.accepted_answers || [c.term],
-              }))
-            );
-          } else {
-            setCards(DEMO_CARDS);
-          }
-        } else {
-          setCards(DEMO_CARDS);
-        }
+        if (!setRes.ok) throw new Error("Không tìm thấy học phần hoặc bạn không có quyền truy cập.");
+        const { data } = await setRes.json();
+        if (!fetchedCards.length) throw new Error("Học phần chưa có thẻ để chơi.");
+        setCurrentSet({ id: data.id, title: data.title, description: data.description, language: "en", cefrLevel: data.cefr_level || "mixed", topic: data.topic || "general", isPublic: data.is_public, cardCount: fetchedCards.length, createdAt: data.created_at, updatedAt: data.updated_at });
+        setCards(fetchedCards.map(c => ({ ...c, reviewStatus: "draft", acceptedAnswers: c.acceptedAnswers || [c.term], partOfSpeech: c.partOfSpeech as VocabularyCard["partOfSpeech"], cefrLevel: c.cefrLevel as VocabularyCard["cefrLevel"], ipa: c.ipa || undefined, exampleEn: c.exampleEn || undefined, exampleVi: c.exampleVi || undefined })));
       } catch (err: unknown) {
         if (ignore) return;
         const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
@@ -111,6 +61,8 @@ function ArcadePageContent() {
     };
   }, [id]);
 
+  if (error) return <AppShell><ErrorAlert message={error} /><button onClick={() => window.location.reload()}>Thử lại</button></AppShell>;
+
   if (loading || !currentSet) {
     return (
       <AppShell>
@@ -122,7 +74,7 @@ function ArcadePageContent() {
   return (
     <AppShell>
       {error && <ErrorAlert message={error} />}
-      <ArcadeClient currentSet={currentSet} cards={cards} />
+      <ArcadeClient key={currentSet.id} currentSet={currentSet} cards={cards} />
     </AppShell>
   );
 }

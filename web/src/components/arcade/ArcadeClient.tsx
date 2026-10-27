@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useRef, useCallback, useMemo } from "react";
+import React, { useState, useRef, useCallback, useMemo, useEffect } from "react";
 import Link from "next/link";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -25,12 +25,9 @@ import type {
   ArcadeMode,
 } from "@/features/arcade/types";
 import { ArcadeCanvas } from "./ArcadeCanvas";
-import {
-  recordLocalAttempt,
-  generateClientEventId,
-  initServerSession,
-  sendServerAttempt,
-} from "@/features/study/study-client-adapter";
+import { useStudyIdentity } from "@/components/auth/AuthProvider";
+import { useStudySession } from "@/features/study/use-study-session";
+import { SyncNotice } from "@/components/study/SyncNotice";
 import {
   Gamepad2,
   Zap,
@@ -57,7 +54,19 @@ interface ArcadeClientProps {
 }
 
 export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards }) => {
-  const [selectedMode, setSelectedMode] = useState<ArcadeMode>("typing");
+  const identity = useStudyIdentity();
+  const modeKey = `eva:v1:${identity.userId}:${currentSet.id}:arcade-mode`;
+  const [selectedMode, setSelectedMode] = useState<ArcadeMode>(() => {
+    if (typeof window === "undefined") return "typing";
+    const requested = new URL(window.location.href).searchParams.get("mode");
+    if (requested === "typing" || requested === "recall") return requested;
+    try { return localStorage.getItem(modeKey) === "recall" ? "recall" : "typing"; } catch { return "typing"; }
+  });
+  useEffect(() => { try { localStorage.setItem(modeKey, selectedMode); } catch { /* Session sync reports storage failures. */ } }, [modeKey, selectedMode]);
+  const chooseMode = (mode: ArcadeMode) => {
+    const url = new URL(window.location.href); url.searchParams.set("mode", mode);
+    window.history.replaceState(null, "", url); setSelectedMode(mode);
+  };
   const [isGameActive, setIsGameActive] = useState(false);
 
   // Sound enabled
@@ -89,36 +98,33 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
   const [lastEvents, setLastEvents] = useState<ArcadeEvent[]>([]);
   const [inputVal, setInputVal] = useState("");
   const [isInputShaking, setIsInputShaking] = useState(false);
-  const [sessionId] = useState(() => "session_arcade_" + Math.random().toString(36).slice(2));
+
 
   const inputRef = useRef<HTMLInputElement>(null);
   const isComposingRef = useRef(false);
-  const serverSessionIdRef = useRef<string | null>(null);
-  const serverVersionRef = useRef<number>(1);
+  const gameRef = useRef(gameState);
+  const [lastAttemptTime, setLastAttemptTime] = useState(0);
+  const lastAttemptTimeRef = useRef(0);
+  const processedEvents = useRef(new Set<string>());
+  const commit = useCallback((next: ArcadeGameState) => { gameRef.current = next; setGameState(next); }, []);
+  const persistence = useStudySession(currentSet.id, selectedMode === "typing" ? "arcade_typing" : "arcade_recall", { gameState, isGameActive, lastAttemptTime }, v => {
+    lastAttemptTimeRef.current = Number(v.lastAttemptTime) || 0; setLastAttemptTime(lastAttemptTimeRef.current);
+    if (v.gameState) {
+      const saved = v.gameState as ArcadeGameState;
+      commit({ ...saved, phase: saved.phase === "running" ? "paused" : saved.phase });
+      setIsGameActive(Boolean(v.isGameActive));
+    }
+  }, cards.length > 0, gameState.phase === "won" || gameState.phase === "lost" ? "completed" : gameState.phase === "paused" ? "paused" : "active");
 
   // Start game handler
   const handleStartGame = () => {
-    const freshGame = createGame(arcadeCards, { mode: selectedMode });
-    const started = startGame(freshGame);
-    setGameState(started);
-    setIsGameActive(true);
-    setLastEvents([]);
-    setInputVal("");
-
-    // Initialize or resume server study session (R03 fix)
-    initServerSession(
-      currentSet.id,
-      selectedMode === "typing" ? "arcade_typing" : "arcade_recall"
-    ).then((res) => {
-      if (res) {
-        serverSessionIdRef.current = res.sessionId;
-        serverVersionRef.current = res.version;
-      }
+    if (!persistence.ready) return;
+    void persistence.restart(() => {
+      commit(startGame(createGame(arcadeCards, { mode: selectedMode, seed: persistence.newEventId() })));
+      lastAttemptTimeRef.current = 0; setLastAttemptTime(0);
+      processedEvents.current.clear(); setIsGameActive(true); setLastEvents([]); setInputVal("");
+      setTimeout(() => inputRef.current?.focus(), 100);
     });
-
-    setTimeout(() => {
-      inputRef.current?.focus();
-    }, 100);
   };
 
   // Sound effect trigger (pure Web Audio API synth tones without external mp3 dependencies)
@@ -162,98 +168,28 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
     [isMuted]
   );
 
-  // Unified event processing pipeline (R13 & R03 fix)
-  const processEvents = useCallback(
-    (events: ArcadeEvent[]) => {
-      if (!events || events.length === 0) return;
-
-      for (const evt of events) {
-        if (evt.type === "TARGET_HIT") {
-          playSound("hit");
-          recordLocalAttempt({
-            clientEventId: generateClientEventId(),
-            sessionId,
-            setId: currentSet.id,
-            cardId: evt.payload?.cardId || "",
-            mode: "arcade",
-            questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
-            userAnswer: evt.payload?.canonicalAnswer || "matched",
-            isCorrect: true,
-            durationMs: 2000,
-            answeredAt: new Date().toISOString(),
-          });
-
-          if (serverSessionIdRef.current) {
-            sendServerAttempt({
-              sessionId: serverSessionIdRef.current,
-              cardId: evt.payload?.cardId || "",
-              clientEventId: generateClientEventId(),
-              questionKey: `arcade:${evt.payload?.cardId || ""}:${Date.now()}`,
-              attemptKind: "game_hit",
-              answerText: evt.payload?.canonicalAnswer || "",
-              activeElapsedMs: 2000,
-              expectedVersion: serverVersionRef.current,
-            }).then((res) => {
-              if (res?.newVersion) serverVersionRef.current = res.newVersion;
-            });
-          }
-        } else if (evt.type === "TARGET_MISSED") {
-          playSound("miss");
-          recordLocalAttempt({
-            clientEventId: generateClientEventId(),
-            sessionId,
-            setId: currentSet.id,
-            cardId: evt.payload?.cardId || "",
-            mode: "arcade",
-            questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall",
-            userAnswer: "",
-            isCorrect: false,
-            durationMs: 4000,
-            answeredAt: new Date().toISOString(),
-          });
-
-          if (serverSessionIdRef.current) {
-            sendServerAttempt({
-              sessionId: serverSessionIdRef.current,
-              cardId: evt.payload?.cardId || "",
-              clientEventId: generateClientEventId(),
-              questionKey: `arcade:${evt.payload?.cardId || ""}:${Date.now()}`,
-              attemptKind: "game_miss",
-              answerText: "",
-              activeElapsedMs: 4000,
-              expectedVersion: serverVersionRef.current,
-            }).then((res) => {
-              if (res?.newVersion) serverVersionRef.current = res.newVersion;
-            });
-          }
-        } else if (evt.type === "WRONG_KEY") {
-          playSound("wrong");
-          setIsInputShaking(true);
-          setTimeout(() => setIsInputShaking(false), 300);
-        }
-      }
-    },
-    [currentSet.id, playSound, selectedMode, sessionId]
-  );
+  // Effects run only from event handlers/frame callbacks, outside React state updaters.
+  const processEvents = useCallback((events: ArcadeEvent[]) => {
+    for (const evt of events) {
+      if (processedEvents.current.has(evt.id)) continue;
+      processedEvents.current.add(evt.id);
+      if (evt.type === "TARGET_HIT" || evt.type === "TARGET_MISSED") {
+        const hit = evt.type === "TARGET_HIT";
+        playSound(hit ? "hit" : "miss");
+        const durationMs = Math.max(0, evt.timestampMs - lastAttemptTimeRef.current);
+        lastAttemptTimeRef.current = evt.timestampMs; setLastAttemptTime(evt.timestampMs);
+        persistence.record({ clientEventId: persistence.newEventId(), cardId: evt.payload?.cardId || "", mode: "arcade", questionType: selectedMode === "typing" ? "arcade_typing" : "arcade_recall", userAnswer: hit ? evt.payload?.canonicalAnswer || "" : "", isCorrect: hit, durationMs, answeredAt: new Date().toISOString() }, evt.id);
+      } else if (evt.type === "WRONG_KEY") { playSound("wrong"); setIsInputShaking(true); setTimeout(() => setIsInputShaking(false), 300); }
+    }
+  }, [persistence, playSound, selectedMode]);
 
   // Engine step handler
-  const handleStep = useCallback(
-    (deltaMs: number) => {
-      setGameState((prevState) => {
-        if (prevState.phase !== "running") return prevState;
-
-        const { state: nextState, events } = step(deltaMs > 0 ? prevState : prevState, deltaMs, cardLookup);
-
-        if (events.length > 0) {
-          setLastEvents(events);
-          processEvents(events);
-        }
-
-        return nextState;
-      });
-    },
-    [cardLookup, processEvents]
-  );
+  const handleStep = useCallback((deltaMs: number) => {
+    if (!persistence.ready || gameRef.current.phase !== "running") return;
+    const result = step(gameRef.current, deltaMs, cardLookup);
+    commit(result.state);
+    if (result.events.length) { setLastEvents(result.events); processEvents(result.events); }
+  }, [cardLookup, commit, processEvents, persistence.ready]);
 
   // Input text change handler
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -263,15 +199,9 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
     if (isComposingRef.current) return;
 
     if (val.length > 0) {
-      const charToAdd = val.slice(-1);
-      setGameState((prev) => {
-        const { state: nextState, events } = consumeText(prev, charToAdd);
-        if (events.length > 0) {
-          setLastEvents(events);
-          processEvents(events);
-        }
-        return nextState;
-      });
+      const result = consumeText(gameRef.current, val);
+      commit(result.state);
+      if (result.events.length) { setLastEvents(result.events); processEvents(result.events); }
 
       // Clear input element so user can type cleanly
       setInputVal("");
@@ -281,25 +211,25 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
   // Keyboard navigation & control keys
   const handleKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === "Backspace") {
-      setGameState((prev) => backspace(prev));
+      commit(backspace(gameRef.current));
     } else if (e.key === "Escape") {
-      setGameState((prev) => unlockTarget(prev));
+      commit(unlockTarget(gameRef.current));
     }
   };
 
   // Canvas target selection
   const handleSelectTarget = (targetId: string) => {
-    setGameState((prev) => selectTarget(prev, targetId));
+    commit(selectTarget(gameRef.current, targetId));
     inputRef.current?.focus();
   };
 
   // Pause / Resume
   const handleTogglePause = () => {
-    setGameState((prev) => (prev.phase === "paused" ? resume(prev) : pause(prev)));
+    commit(gameRef.current.phase === "paused" ? resume(gameRef.current) : pause(gameRef.current));
   };
 
   const handleNextStage = () => {
-    setGameState((prev) => nextStage(prev));
+    commit(nextStage(gameRef.current));
     inputRef.current?.focus();
   };
 
@@ -321,10 +251,13 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
       gameState.phase === "lost"
   );
 
+  if (!persistence.ready) return <div><SyncNotice message={persistence.error} ready={false} retry={persistence.retry} /><p>Đang khôi phục trò chơi...</p></div>;
+
   // 1. LANDING & MODE SELECTION SCREEN
   if (!isGameActive) {
     return (
       <div className="space-y-6">
+        <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
         <div className="flex items-center justify-between">
           <Link
             href={`/sets/${currentSet.id}`}
@@ -354,7 +287,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             <div
-              onClick={() => setSelectedMode("typing")}
+              onClick={() => chooseMode("typing")}
               className={`p-6 rounded-2xl border-2 transition-all cursor-pointer ${
                 selectedMode === "typing"
                   ? "border-teal-500 bg-teal-50/50 dark:bg-teal-950/30 shadow-md"
@@ -380,7 +313,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
             </div>
 
             <div
-              onClick={() => setSelectedMode("recall")}
+              onClick={() => chooseMode("recall")}
               className={`p-6 rounded-2xl border-2 transition-all cursor-pointer ${
                 selectedMode === "recall"
                   ? "border-amber-500 bg-amber-50/50 dark:bg-amber-950/30 shadow-md"
@@ -440,6 +373,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
   return (
     <div className="space-y-4 max-w-4xl mx-auto">
+        <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
       {/* Top HUD */}
       <div className="flex items-center justify-between p-3.5 sm:p-4 rounded-2xl bg-zinc-900 text-zinc-100 border border-zinc-800 shadow-lg">
         {/* Lives */}
@@ -506,7 +440,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
           gameState={gameState}
           onStep={handleStep}
           onSelectTarget={handleSelectTarget}
-          onAutoPause={() => setGameState((p) => pause(p))}
+          onAutoPause={() => commit(pause(gameRef.current))}
           lastEvents={lastEvents}
         />
 
@@ -650,7 +584,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
               {/* Persistence Notice */}
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-800/40 p-2 rounded-xl">
                 <Info className="w-3.5 h-3.5 shrink-0 text-teal-400" />
-                <span>Tiến độ trò chơi đã được lưu cục bộ (localStorage).</span>
+                <span>Tiến độ được lưu trên máy và đồng bộ khi bạn đăng nhập.</span>
               </div>
 
               {/* Action Buttons */}
@@ -722,7 +656,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
             </span>
             <button
               type="button"
-              onClick={() => setGameState((prev) => unlockTarget(prev))}
+              onClick={() => commit(unlockTarget(gameRef.current))}
               className="text-[11px] text-zinc-400 hover:text-zinc-200 underline"
             >
               Hủy khóa (Esc)

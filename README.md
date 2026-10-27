@@ -1,118 +1,79 @@
-# English Vocab Arcade — Nền tảng Học Từ vựng Tiếng Anh Trực quan
+# English Vocab Arcade
 
-Web học tiếng Anh hiện đại dành cho người Việt, tập trung vào từ vựng và cấu trúc câu A1–B1 với phương pháp học tập kết hợp trò chơi phản xạ trực quan (**Word Blaster**), lặp lại ngắt quãng (SRS) và các bài tập thực hành ngữ cảnh.
+Web tiếng Việt để học tiếng Anh A1–B1: bộ thẻ, Learn/Test, Match theo chặng, Word Blaster, nghe chính tả, luyện nói và bài tập AI theo ngữ cảnh. Mã ứng dụng nằm trong `web/`.
 
----
+Sau lần sửa 27/10/2026: lint, TypeScript, 114 unit tests, 46 integration tests và production build local đã PASS. Kết quả browser, phạm vi và phần chưa xác minh: [báo cáo bản sửa](reports/fix-verification-20261027.md).
 
-## 1. Trạng thái Dự án (Release Candidate 1)
+Chưa có bằng chứng deploy production hoặc gọi Gemini thật trong lần sửa này. Tập 32 thẻ hiện tại là dữ liệu thử nội bộ; public beta cần >=300 thẻ và duyệt ngôn ngữ độc lập. Metadata `reviewed` và hash không chứng minh đã được chuyên gia duyệt.
 
-- **Mã nguồn ứng dụng**: Đã hoàn tất 100% chức năng theo đặc tả trong thư mục `web/`.
-- **Kiểm thử tự động**: 135/135 tests PASS (97 unit tests, 38 integration tests).
-- **Chất lượng mã**: 0 ESLint warnings, 0 TypeScript errors, 36 Next.js routes biên dịch Turbopack thành công.
-- **An toàn bảo mật**: RLS kích hoạt trên 100% bảng exposed; không rò rỉ secret key hoặc auth token; trang Khám phá bảo vệ danh tính tuyệt đối.
-- **Bàn giao vận hành**: Đã sẵn sàng kết nối dịch vụ đám mây (GitHub, Supabase Production, Vercel) theo [reports/deployment.md](reports/deployment.md).
+## Chạy local
 
----
+Cần Node 24.x, npm và Docker. Từ thư mục gốc:
 
-## 2. Tính năng Chính
-
-### 2.1. Học tập Nền tảng (Core Study Modules)
-- **Flashcards 3D**: Lật thẻ 3 chiều mượt mà, hỗ trợ phát âm tiếng Anh chuẩn (TTS 1.0x & 0.75x) và phím tắt Space / Mũi tên.
-- **Chế độ Học (Learn Mode)**: 3 chặng thích ứng (trắc nghiệm 4 lựa chọn, điền từ khuyết, gõ từ chính xác); ghi nhận lỗi sai và ôn tập vòng lặp riêng.
-- **Chế độ Kiểm tra (Test Mode)**: Đánh giá toàn diện kiến thức của học phần với bảng điểm chi tiết.
-- **Ghép cặp (Match Mode)**: Chia nhóm 6 cặp/chặng năng động, đồng hồ bấm giờ trực tiếp và giải quyết xung đột nhấp chuột.
-
-### 2.2. Trò chơi Chủ lực — Word Blaster (Arcade Game)
-- Game Canvas 2D tốc độ cao 60 FPS, tỷ lệ co giãn DPR sắc nét.
-- **2 chế độ chơi**:
-  1. *Luyện gõ từ*: Mục tiêu hiển thị từ tiếng Anh, gõ đúng để bắn hạ.
-  2. *Gợi nhớ từ*: Mục tiêu hiển thị nghĩa tiếng Việt, tự nhớ và gõ từ tiếng Anh tương ứng.
-- Khóa mục tiêu thông minh (urgency tie-break), 3 mạng chơi, bảng điểm và hỗ trợ bàn phím di động mượt mà.
-
-### 2.3. Bài tập Tiếng Anh Ngữ cảnh (English Modules)
-- **Luyện ngữ pháp**: Ghép các thẻ từ xáo trộn để tạo câu tiếng Anh hoàn chỉnh, đối chiếu theo các trật tự chấp nhận được (`acceptedTokenOrders`).
-- **Đọc hiểu**: Đoạn văn bản A1–B1 kèm bản dịch tham khảo tùy chọn và 4 câu hỏi trắc nghiệm kiểm tra khả năng nắm bắt nội dung.
-- **Luyện dịch Việt → Anh**: Dịch tự do đối chiếu với đáp án tham chiếu chuẩn hóa, không dùng các thuật toán giả định sai ngữ pháp.
-- **Chính tả (Dictation)**: Nghe phát âm mẫu và gõ lại chính xác từ vựng kèm hiển thị phiên âm IPA.
-- **Luyện nói (Speaking)**: Thu âm phát âm qua Web Speech API, chấm điểm theo token chuẩn xác, kèm chế độ gõ bàn phím dự phòng (Keyboard fallback).
-
-### 2.4. Trí tuệ Nhân tạo & Bộ đệm Bền vững (AI & Quota)
-- Tích hợp Gemini 2.5 Flash (fallback 1.5 Flash) qua module server-only an toàn.
-- Bộ đệm bền vững trên database với khóa băm SHA-256 (E07 cache hit không phát sinh thêm cuộc gọi nhà cung cấp).
-- Kiểm soát hạn mức nguyên tử theo ngày và theo phút (D11 daily quota lock).
-
----
-
-## 3. Khởi chạy Ứng dụng Local
-
-### Yêu cầu Hệ thống
-- **Node.js**: `v24.x`
-- **npm**: `11.x`
-- **Docker**: Khả dụng để chạy Supabase local stack
-
-### Cài đặt và Chạy Development
 ```powershell
-# Di chuyển vào thư mục web
 cd web
-
-# Cài đặt thư viện
-npm install
-
-# Khởi chạy Next.js Turbopack dev server (cổng 3000)
-npm run dev
-```
-
-### Chạy Supabase Local (Docker)
-```powershell
-# Từ thư mục web, khởi động cụm Supabase local
+npm ci
 npx supabase --workdir .. start
-
-# Xem trạng thái migration đã áp dụng
-npx supabase --workdir .. migration list
+npx supabase --workdir .. migration up --local
 ```
 
----
+Tạo `web/.env.local` từ [mẫu cấu hình](web/.env.example) nếu chưa tồn tại. Điền URL, publishable key và server secret của đúng Supabase local/project tiếng Anh. Không lấy env từ dự án tiếng Trung. Sau đó chạy `npm run dev`.
 
-## 4. Kiểm thử Toàn diện
+Migration mới là `20261027000005_reliable_study_and_ai_budget.sql`; các migration đã áp dụng trước đó được giữ nguyên. Migration mới đã áp dụng vào local, chưa đẩy remote.
+
+## Kiểm tra
+
+Trong `web/`:
 
 ```powershell
-cd web
-
-# 1. Kiểm tra Linting (ESLint v9 flat config)
 npm run lint
-
-# 2. Kiểm tra Kiểu dữ liệu (TypeScript strict)
 npm run typecheck
-
-# 3. Chạy Unit Tests (Vitest)
 npm run test
-
-# 4. Chạy Integration Tests (Supabase RLS & Contracts)
 npm run test:integration
-
-# 5. Biên dịch Production Build
 npm run build
+npm run test:e2e
+```
 
-# 6. Kiểm tra Toàn vẹn Hồ sơ Bàn giao (từ thư mục root)
-cd ..
+Integration/E2E dùng Supabase local. Playwright dùng Edge trên Windows; Linux cần `npx playwright install --with-deps chromium`. E2E khởi động build production tại `127.0.0.1:3197`, tạo dữ liệu synthetic rồi xóa tài khoản thử. Ca AI dùng cache synthetic, không gọi provider. Không đưa `web/test-results/` hoặc browser trace lên Git vì có thể chứa cookie phiên thử.
+
+Từ thư mục gốc:
+
+```powershell
+node --test scripts/scan-secrets.test.mjs
+node scripts/scan-secrets.mjs
 node scripts/check-handoff.mjs
 ```
 
----
+## Lưu tiến độ
 
-## 5. Bản đồ Tài liệu & Báo cáo
+- Phiên server và local queue tách theo user/học phần/mode. Khách chỉ lưu trên trình duyệt.
+- Reload khôi phục câu, đáp án, chặng và trạng thái. Game đang chạy trở lại ở trạng thái pause; typing/recall được giữ theo URL và tùy chọn tài khoản.
+- Attempts gửi theo thứ tự, retry giữ nguyên event ID. Lỗi mạng giữ queue; sau phục hồi vẫn đồng bộ các thay đổi mới.
+- Khi tab khác sửa phiên, ứng dụng dừng ghi đè và giữ bản sao xung đột. Logout chờ queue, dừng writer rồi xóa local data của đúng user.
+- Thời gian lấy từ clock/engine; pause/tab ẩn không được tính như đang trả lời. Typing có đáp án hiển thị và tự đánh giá flashcard không nâng mức thuộc từ đã kiểm chứng.
 
-| Tài liệu / Báo cáo | Nội dung chi tiết |
-|---|---|
-| [PLAN.md](PLAN.md) | Kế hoạch tổng thể 14 giai đoạn (P0–P13) và 23 ticket (T00–T22) |
-| [tasks/STATUS.md](tasks/STATUS.md) | Trạng thái triển khai và nhật ký kiểm thử chi tiết của từng ticket |
-| [docs/08-deployment-runbook.md](docs/08-deployment-runbook.md) | Quy trình vận hành, triển khai cloud, bảo mật và rollback |
-| [docs/09-work-breakdown.md](docs/09-work-breakdown.md) | Tiêu chí nghiệm thu chi tiết cho từng tác vụ |
-| [reports/deployment.md](reports/deployment.md) | Hướng dẫn kết nối Supabase, GitHub và Vercel cho chủ dự án |
-| [reports/release-v1.md](reports/release-v1.md) | Biên bản nghiệm thu phát hành bản Beta v1.0 |
-| [reports/phase-P11.md](reports/phase-P11.md) | Báo cáo nghiệm thu chất lượng, CI và kiểm toán bảo mật |
-| [reports/phase-P12.md](reports/phase-P12.md) | Báo cáo nghiệm thu giai đoạn triển khai và bàn giao |
-| [reports/content-review.md](reports/content-review.md) | Thẩm định 32 thẻ từ vựng Beta A1–B1 có chữ ký biên tập |
-| [reports/provider-check.md](reports/provider-check.md) | Báo cáo xác thực adapter mô hình Gemini AI |
-| [reports/environment.md](reports/environment.md) | Báo cáo môi trường hệ thống và phiên bản thư viện |
-| [templates/release-checklist.md](templates/release-checklist.md) | Mẫu danh mục kiểm tra phát hành tiêu chuẩn |
+Module chính: [queue](web/src/features/study/session-sync.ts), [React hook](web/src/features/study/use-study-session.ts), [server repository](web/src/features/study/sessions.repository.ts).
+
+## AI và ngân sách
+
+`GEMINI_API_KEY` và Supabase secret chỉ dùng server. `AI_ENABLED=false` tắt chức năng AI; các chế độ cốt lõi/game vẫn hoạt động. Model chính dùng `GEMINI_MODEL_PRIMARY`; fallback chỉ dùng khi cấu hình `GEMINI_MODEL_FALLBACK`, không tự chọn model cũ.
+
+| Cấu hình | Mặc định |
+| --- | --- |
+| `AI_DAILY_BATCHES_PER_USER` | 5 batch/ngày/user |
+| `AI_OPERATIONS_PER_MINUTE_PER_USER` | 2 lượt tạo/phút/user, kể cả takeover |
+| `AI_GLOBAL_DAILY_CALL_LIMIT` | 100 provider calls/ngày, toàn ứng dụng |
+| `AI_GLOBAL_MINUTE_CALL_LIMIT` | 10 provider calls/phút, toàn ứng dụng |
+| `AI_USER_DAILY_CALL_LIMIT` | 10 provider calls/ngày/user |
+
+Budget được reserve nguyên tử trong DB trước mỗi provider call, kể cả fallback. Batch thất bại phải chờ cooldown. Cache hit không reserve thêm provider call. UI poll pending với deadline/cancel; lỗi học phần thật không biến thành bài mẫu. Grammar/Reading/Translation được server chấm theo batch thuộc user/học phần.
+
+## Bàn giao
+
+- [Trạng thái và lịch sử](tasks/STATUS.md)
+- [Bằng chứng bản sửa](reports/fix-verification-20261027-evidence.json)
+- [Phạm vi học liệu](reports/content-review.md)
+- [Checklist phát hành](reports/release-v1.md)
+- [Runbook deploy](reports/deployment.md)
+
+GitHub push, GitHub Actions, Vercel Ready, migration production và smoke production là các bước xác minh riêng. Báo cáo review cũ được giữ theo commit đã kiểm tra.

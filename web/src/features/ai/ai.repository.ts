@@ -1,6 +1,8 @@
 import "server-only";
+import { getServerEnv } from "@/lib/env.server";
 
-import { createHash } from "node:crypto";
+import { computeAiCacheKey, CURRENT_PROMPT_VERSION, CURRENT_SCHEMA_VERSION } from "./cache-key";
+export { computeAiCacheKey, CURRENT_PROMPT_VERSION, CURRENT_SCHEMA_VERSION } from "./cache-key";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin.server";
 import {
   generateAiBatchContent,
@@ -8,64 +10,6 @@ import {
   type AiProvider,
 } from "./service.server";
 import type { AiMode } from "./schemas";
-
-export const CURRENT_PROMPT_VERSION = "2026-10-v1";
-export const CURRENT_SCHEMA_VERSION = "2026-10-v1";
-
-export interface ComputeCacheKeyParams {
-  userId: string;
-  setId: string;
-  contentRevision: number;
-  mode: AiMode;
-  cards: TargetCardInfo[];
-  targetLevel: string;
-  promptVersion?: string;
-  schemaVersion?: string;
-  nonce?: number;
-}
-
-/**
- * Computes canonical SHA-256 hash key for AI batch caching.
- * Cards are sorted by ID to prevent permutation mismatches.
- */
-export function computeAiCacheKey(params: ComputeCacheKeyParams): string {
-  const {
-    userId,
-    setId,
-    contentRevision,
-    mode,
-    cards,
-    targetLevel,
-    promptVersion = CURRENT_PROMPT_VERSION,
-    schemaVersion = CURRENT_SCHEMA_VERSION,
-    nonce = 0,
-  } = params;
-
-  // Sort cards canonically by id
-  const canonicalCards = [...cards]
-    .sort((a, b) => a.id.localeCompare(b.id))
-    .map((c) => ({
-      id: c.id,
-      term: c.term.trim().toLowerCase(),
-      meaningVi: c.meaningVi.trim(),
-      partOfSpeech: c.partOfSpeech,
-      cefrLevel: c.cefrLevel || targetLevel,
-    }));
-
-  const payload = {
-    userId,
-    setId,
-    contentRevision,
-    mode,
-    cards: canonicalCards,
-    targetLevel,
-    promptVersion,
-    schemaVersion,
-    nonce,
-  };
-
-  return createHash("sha256").update(JSON.stringify(payload)).digest("hex");
-}
 
 export interface GetOrCreateAiBatchParams {
   userId: string;
@@ -106,10 +50,12 @@ export async function getOrCreateAiBatch(
     targetLevel = "A2",
     nonce = 0,
     injectedProvider,
-    dailyLimit = 5,
-    minuteLimit = 2,
   } = params;
 
+  const env = getServerEnv();
+  const dailyLimit = params.dailyLimit ?? env.AI_DAILY_BATCHES_PER_USER;
+  const minuteLimit = params.minuteLimit ?? env.AI_OPERATIONS_PER_MINUTE_PER_USER;
+  if (!env.AI_ENABLED && !injectedProvider) return { status: "failed", code: "AI_DISABLED", error: "Tính năng AI đang tắt." };
   const adminClient = getSupabaseAdminClient();
   const cacheKey = computeAiCacheKey({
     userId,
@@ -207,6 +153,13 @@ export async function getOrCreateAiBatch(
       targetLevel,
       injectedProvider,
       timeoutBudgetMs: 20000,
+      reserveProviderCall: injectedProvider ? undefined : async () => {
+        const { data, error } = await adminClient.rpc("reserve_ai_provider_call_v1", {
+          p_user_id: userId, p_global_daily_limit: env.AI_GLOBAL_DAILY_CALL_LIMIT,
+          p_global_minute_limit: env.AI_GLOBAL_MINUTE_CALL_LIMIT, p_user_daily_limit: env.AI_USER_DAILY_CALL_LIMIT,
+        });
+        if (error || !(data as { success?: boolean })?.success) throw new Error("Provider budget exhausted");
+      },
     });
 
     if (genResult.success) {

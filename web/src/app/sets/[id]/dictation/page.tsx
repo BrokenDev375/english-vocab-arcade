@@ -1,6 +1,10 @@
 "use client";
+import { useElapsedTime } from "@/features/study/use-elapsed-time";
 
-import React, { useState, useEffect, useRef, Suspense } from "react";
+import { useStudySession } from "@/features/study/use-study-session";
+import { SyncNotice } from "@/components/study/SyncNotice";
+
+import React, { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
@@ -15,10 +19,8 @@ import { playEnglishSpeech } from "@/features/audio/speech-adapter";
 import { isAnswerCorrect } from "@/features/study/engine";
 import { fetchAllSetCards } from "@/features/sets/sets-client";
 import {
-  recordLocalAttempt,
   generateClientEventId,
-  initServerSession,
-  sendServerAttempt,
+  type StudyAttemptRecord,
 } from "@/features/study/study-client-adapter";
 import {
   ArrowLeft,
@@ -56,7 +58,6 @@ function DictationContent() {
   const [showMeaningHint, setShowMeaningHint] = useState(false);
   const [score, setScore] = useState(0);
   const [sessionId] = useState(() => `session_dict_${Date.now()}`);
-  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
 
   useEffect(() => {
     let ignore = false;
@@ -114,11 +115,6 @@ function DictationContent() {
           }))
         );
 
-        void initServerSession(setId, "dictation").then((sess) => {
-          if (sess && !ignore) {
-            serverSessionRef.current = sess;
-          }
-        });
       } catch (err: unknown) {
         if (ignore) return;
         const msg = err instanceof Error ? err.message : "Lỗi tải học phần";
@@ -139,6 +135,9 @@ function DictationContent() {
     };
   }, [setId]);
 
+  const persistence = useStudySession(setId, "dictation", { cards, currentIndex, userAnswer, isEvaluated, isCorrect, score, showMeaningHint }, v => { if (Array.isArray(v.cards)) setCards(v.cards as StudyCard[]); setCurrentIndex(Number(v.currentIndex)||0); setUserAnswer(String(v.userAnswer||"")); setIsEvaluated(Boolean(v.isEvaluated)); setIsCorrect(Boolean(v.isCorrect)); setScore(Number(v.score)||0); setShowMeaningHint(Boolean(v.showMeaningHint)); }, !loading && !error && cards.length > 0, currentIndex === cards.length-1 && isEvaluated ? "completed" : "active");
+  const elapsedTime = useElapsedTime(currentIndex, persistence.ready);
+  const recordLocalAttempt = (attempt: StudyAttemptRecord) => persistence.record(attempt);
   const currentCard = cards[currentIndex] || cards[0];
 
   const handlePlayAudio = (rate: number = 1.0) => {
@@ -169,7 +168,7 @@ function DictationContent() {
     }
 
     const clientEventId = generateClientEventId();
-    const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+    const effectiveSessionId = sessionId;
 
     recordLocalAttempt({
       clientEventId,
@@ -180,27 +179,10 @@ function DictationContent() {
       questionType: "type_in",
       userAnswer,
       isCorrect: correct,
-      durationMs: 3000,
+      durationMs: elapsedTime(),
       answeredAt: new Date().toISOString(),
     });
 
-    if (serverSessionRef.current) {
-      const currentSess = serverSessionRef.current;
-      void sendServerAttempt({
-        sessionId: currentSess.sessionId,
-        cardId: currentCard.id,
-        clientEventId,
-        questionKey: `dict_${currentCard.id}`,
-        attemptKind: "answer",
-        answerText: userAnswer,
-        activeElapsedMs: 3000,
-        expectedVersion: currentSess.version,
-      }).then((res) => {
-        if (res?.newVersion && serverSessionRef.current) {
-          serverSessionRef.current.version = res.newVersion;
-        }
-      });
-    }
   };
 
   const handleNext = () => {
@@ -213,9 +195,10 @@ function DictationContent() {
     }
   };
 
-  if (loading) {
+  if (loading || !persistence.ready) {
     return (
       <AppShell>
+        <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
         <LoadingState message="Đang chuẩn bị bài nghe chính tả..." />
       </AppShell>
     );
@@ -241,6 +224,7 @@ function DictationContent() {
 
   return (
     <AppShell>
+      <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
       <div className="max-w-xl mx-auto space-y-6">
         {/* Navigation header */}
         <div className="flex items-center justify-between">
@@ -409,12 +393,12 @@ function DictationContent() {
                       variant="outline"
                       size="sm"
                       className="flex-1"
-                      onClick={() => {
+                      onClick={() => { void persistence.restart(() => {
                         setCurrentIndex(0);
                         setUserAnswer("");
                         setIsEvaluated(false);
                         setScore(0);
-                      }}
+ }); }}
                     >
                       Làm lại
                     </Button>

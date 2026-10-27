@@ -1,7 +1,11 @@
+import { hasValidOrigin } from "@/lib/origin";
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
+  if (request.nextUrl.pathname.startsWith("/api/") && ["POST", "PATCH", "PUT", "DELETE"].includes(request.method)) {
+    if (!hasValidOrigin(request, process.env.NEXT_PUBLIC_APP_URL)) return NextResponse.json({ error: { code: "INVALID_ORIGIN", message: "Yêu cầu không hợp lệ." } }, { status: 403 });
+  }
   let response = NextResponse.next({
     request: {
       headers: request.headers,

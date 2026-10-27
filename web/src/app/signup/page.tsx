@@ -51,7 +51,8 @@ export default function SignupPage() {
       }
 
       if (data.session) {
-        router.push("/dashboard");
+        window.dispatchEvent(new Event("eva-auth-changed"));
+      router.push("/dashboard");
         router.refresh();
       } else {
         setSuccessMessage(

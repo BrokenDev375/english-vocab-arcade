@@ -1,0 +1,87 @@
+{
+  "verifiedAtUtc": "2026-10-27T13:33:00.134Z",
+  "baselineCommit": "abb35fa3990dbf1f807708b8f0d81d5a93473b48",
+  "workingTreeFix": true,
+  "codeFingerprint": {
+    "algorithm": "SHA-256 of sorted relative path + NUL + per-file SHA-256 + newline",
+    "files": 155,
+    "sha256": "d6ca338104abd4690919ba57c70cb7ed1e2c4d4acf3a235d4af2ffaa518521fd",
+    "scope": "app source, tests, migrations, workflow, package/config and scanner; no env secrets"
+  },
+  "checks": {
+    "lint": {
+      "status": "PASS",
+      "warnings": 0
+    },
+    "typecheck": {
+      "status": "PASS"
+    },
+    "unit": {
+      "status": "PASS",
+      "tests": 114,
+      "files": 16
+    },
+    "integration": {
+      "status": "PASS",
+      "tests": 46,
+      "files": 10,
+      "backend": "local Supabase"
+    },
+    "productionBuild": {
+      "status": "PASS"
+    },
+    "browser": {
+      "status": "PASSED",
+      "tests": 15,
+      "platform": "Windows, Edge headless, production build, 1 worker",
+      "failedTests": []
+    },
+    "scannerTests": {
+      "status": "PASS",
+      "tests": 2
+    },
+    "secretPatternScan": {
+      "status": "PASS",
+      "scope": "tracked and non-ignored untracked files"
+    },
+    "handoff": "PASS",
+    "diffCheck": "PASS"
+  },
+  "browserCoverage": [
+    "UI create/learn/reload/offline retry/logout/account switch",
+    "1001 cards and failed second page",
+    "Arcade typing one hit and mode resume",
+    "Arcade recall one hit and mode resume",
+    "Match stage resume",
+    "cached Grammar server grade",
+    "cached Reading server grade",
+    "cached Translation server grade",
+    "private session and cross-origin rejection",
+    "Test resume/completed",
+    "Flashcard resume/completed",
+    "Dictation new round/reload",
+    "Speaking keyboard fallback/server grade",
+    "session cookie refresh",
+    "recovery confirmation/password reset"
+  ],
+  "migration": {
+    "added": "20261027000005_reliable_study_and_ai_budget.sql",
+    "appliedTo": "local only",
+    "previousAppliedMigrationsModified": false
+  },
+  "realGeminiCalls": 0,
+  "browserAiFixtures": "synthetic ready cache, no provider",
+  "pushed": false,
+  "deployed": false,
+  "unverified": [
+    "real Gemini models/provider/network/billing",
+    "GitHub Actions remote",
+    "production Supabase/Vercel/smoke",
+    "physical microphone/speaker/mobile devices",
+    "public beta >=300 cards and independent linguistic/source review"
+  ],
+  "cleanup": "E2E afterAll deletes its synthetic users and their data; Playwright owns temporary port 3197; traces ignored",
+  "postVerificationFormattingOnly": [
+    "removed trailing blank line at EOF in migration 0005 and cache-key.ts before staging; no SQL or TypeScript logic changed"
+  ]
+}

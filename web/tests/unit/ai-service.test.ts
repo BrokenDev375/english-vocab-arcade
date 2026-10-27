@@ -117,8 +117,8 @@ describe("T14 - Gemini Provider Adapter & Zod Validation", () => {
     );
 
     expect(res.success).toBe(true);
-    expect(res.modelId).toBe("gemini-1.5-flash");
-    expect(attemptedModels).toEqual(["gemini-2.5-flash", "gemini-1.5-flash"]);
+    expect(res.modelId).toBe("test-fallback");
+    expect(attemptedModels).toEqual(["gemini-2.5-flash", "test-fallback"]);
   });
 
   it("halts immediately on 401 / 403 errors without retrying", async () => {

@@ -1,3 +1,4 @@
+import { getRequestOrigin } from "@/lib/origin";
 import { NextResponse } from "next/server";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
@@ -18,7 +19,7 @@ export async function POST(request: Request) {
     }
 
     const { email } = parsed.data;
-    const { origin } = new URL(request.url);
+    const origin = getRequestOrigin(request);
     const supabase = await createSupabaseServerClient();
 
     // Send recovery email

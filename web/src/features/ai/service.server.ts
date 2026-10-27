@@ -330,6 +330,7 @@ export interface GenerateAiContentOptions {
   targetLevel?: "A1" | "A2" | "B1";
   timeoutBudgetMs?: number;
   injectedProvider?: AiProvider;
+  reserveProviderCall?: () => Promise<void>;
 }
 
 /**
@@ -373,7 +374,7 @@ export async function generateAiBatchContent(
   }
 
   const primaryModel = env.GEMINI_MODEL_PRIMARY || "gemini-2.5-flash";
-  const fallbackModel = env.GEMINI_MODEL_FALLBACK || "gemini-1.5-flash";
+  const fallbackModel = env.GEMINI_MODEL_FALLBACK?.trim();
   const expectedCardIds = cards.map((c) => c.id);
 
   const { systemInstruction, prompt, jsonSchema } = buildPromptAndSchema(
@@ -387,7 +388,7 @@ export async function generateAiBatchContent(
   let lastErrorCode = "UNKNOWN_ERROR";
 
   // Max 2 calls: Primary, then Fallback if retriable
-  const modelsToTry = [primaryModel, fallbackModel];
+  const modelsToTry = [...new Set([primaryModel, fallbackModel].filter((model): model is string => !!model))];
 
   for (let attempt = 0; attempt < modelsToTry.length; attempt++) {
     const modelId = modelsToTry[attempt];
@@ -404,6 +405,8 @@ export async function generateAiBatchContent(
 
     const callTimeoutMs = Math.min(10000, remainingTimeMs);
 
+    try { await options.reserveProviderCall?.(); }
+    catch { return { success: false, errorCode: "PROVIDER_BUDGET_EXCEEDED", error: "Hạn mức gọi AI đã hết. Vui lòng thử lại sau." }; }
     try {
       const result = await provider.generate(
         modelId,

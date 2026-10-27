@@ -1,6 +1,10 @@
 "use client";
+import { useElapsedTime } from "@/features/study/use-elapsed-time";
 
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import { useStudySession } from "@/features/study/use-study-session";
+import { SyncNotice } from "@/components/study/SyncNotice";
+
+import React, { useState, useEffect, useCallback } from "react";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -17,10 +21,8 @@ import {
 import type { StudyCard } from "@/features/study/question-engine";
 import { shuffle } from "@/features/study/shuffle";
 import {
-  recordLocalAttempt,
   generateClientEventId,
-  initServerSession,
-  sendServerAttempt,
+  type StudyAttemptRecord,
 } from "@/features/study/study-client-adapter";
 
 interface FlashcardViewerProps {
@@ -34,21 +36,13 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
   const [isFlipped, setIsFlipped] = useState(false);
   const [sessionId] = useState(() => `session_fc_${Date.now()}`);
   const [rememberedCount, setRememberedCount] = useState(0);
+  const [ratedIds, setRatedIds] = useState<string[]>([]);
   const [forgotCount, setForgotCount] = useState(0);
-  const serverSessionRef = useRef<{ sessionId: string; version: number } | null>(null);
 
-  useEffect(() => {
-    let ignore = false;
-    void initServerSession(setId, "flashcard").then((sess) => {
-      if (sess && !ignore) {
-        serverSessionRef.current = sess;
-      }
-    });
-    return () => {
-      ignore = true;
-    };
-  }, [setId]);
 
+  const persistence = useStudySession(setId, "flashcard", { cards, currentIndex, isFlipped, rememberedCount, forgotCount, ratedIds }, v => { setRatedIds((v.ratedIds || []) as string[]); if (Array.isArray(v.cards)) setCards(v.cards as StudyCard[]); setCurrentIndex(Number(v.currentIndex)||0); setIsFlipped(Boolean(v.isFlipped)); setRememberedCount(Number(v.rememberedCount)||0); setForgotCount(Number(v.forgotCount)||0); }, cards.length > 0, rememberedCount + forgotCount >= cards.length ? "completed" : "active");
+  const elapsedTime = useElapsedTime(currentIndex, persistence.ready);
+  const recordLocalAttempt = useCallback((attempt: StudyAttemptRecord) => persistence.record(attempt), [persistence]);
   const currentCard = cards[currentIndex] || cards[0];
 
   const handleNext = useCallback(() => {
@@ -80,8 +74,10 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
 
   const handleRate = useCallback(
     (remembered: boolean) => {
-      if (!currentCard) return;
+      if (!currentCard || !persistence.ready) return;
 
+      if (ratedIds.includes(currentCard.id)) { handleNext(); return; }
+      setRatedIds(ids => [...ids, currentCard.id]);
       if (remembered) {
         setRememberedCount((c) => c + 1);
       } else {
@@ -89,7 +85,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
       }
 
       const clientEventId = generateClientEventId();
-      const effectiveSessionId = serverSessionRef.current?.sessionId || sessionId;
+      const effectiveSessionId = sessionId;
 
       // Record flashcard self-rating attempt (distinguished from verified testing)
       recordLocalAttempt({
@@ -101,31 +97,14 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
         questionType: "flashcard_self_rate",
         userAnswer: remembered ? "remembered" : "forgot",
         isCorrect: remembered,
-        durationMs: 2000,
+        durationMs: elapsedTime(),
         answeredAt: new Date().toISOString(),
       });
 
-      if (serverSessionRef.current) {
-        const currentSess = serverSessionRef.current;
-        void sendServerAttempt({
-          sessionId: currentSess.sessionId,
-          cardId: currentCard.id,
-          clientEventId,
-          questionKey: `fc_${currentCard.id}`,
-          attemptKind: "self_rating",
-          answerText: remembered ? "remembered" : "forgot",
-          activeElapsedMs: 2000,
-          expectedVersion: currentSess.version,
-        }).then((res) => {
-          if (res?.newVersion && serverSessionRef.current) {
-            serverSessionRef.current.version = res.newVersion;
-          }
-        });
-      }
 
       handleNext();
     },
-    [currentCard, handleNext, sessionId, setId]
+    [currentCard, handleNext, sessionId, setId, persistence, recordLocalAttempt, ratedIds, elapsedTime]
   );
 
   const handleShuffleCards = () => {
@@ -163,8 +142,11 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
 
   if (!currentCard) return null;
 
+  if (!persistence.ready) return <><SyncNotice message={persistence.error} ready={false} retry={persistence.retry} /><p>Đang khôi phục bộ thẻ...</p></>;
+  if (rememberedCount + forgotCount >= cards.length) return <div className="space-y-4"><SyncNotice message={persistence.error} ready retry={persistence.retry} /><p>Đã ôn {cards.length} thẻ.</p><Button onClick={() => { void persistence.restart(() => { setCurrentIndex(0); setRememberedCount(0); setForgotCount(0); setRatedIds([]); setIsFlipped(false); }); }}>Ôn lại</Button></div>;
   return (
     <div className="max-w-2xl mx-auto space-y-6">
+      <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
       {/* Top Controls & Counter */}
       <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
         <div className="flex items-center gap-3">

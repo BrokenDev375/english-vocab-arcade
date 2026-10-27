@@ -1,4 +1,4 @@
-import React from "react";
+import React, { Suspense } from "react";
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
@@ -30,7 +30,7 @@ interface SetDetailPageProps {
   params: Promise<{ id: string }>;
 }
 
-export default async function SetDetailPage({ params }: SetDetailPageProps) {
+async function SetDetailContent({ params }: SetDetailPageProps) {
   const { id } = await params;
 
   let currentSet: {
@@ -52,7 +52,7 @@ export default async function SetDetailPage({ params }: SetDetailPageProps) {
     position: number;
   }>;
 
-  if (id.startsWith("d000")) {
+  if (DEMO_SETS.some(set => set.id === id)) {
     const demo = DEMO_SETS.find((s) => s.id === id);
     if (!demo) {
       notFound();
@@ -96,11 +96,15 @@ export default async function SetDetailPage({ params }: SetDetailPageProps) {
       topic: setRow.topic || "general",
     };
 
-    const { data: cardsRows } = await supabase
-      .from("vocabulary_cards")
-      .select("id, term, meaning_vi, part_of_speech, cefr_level, ipa, example_en, example_vi, position")
-      .eq("set_id", id)
-      .order("position", { ascending: true });
+    const cardsRows = [];
+    for (let offset = 0; ; offset += 1000) {
+      const { data, error } = await supabase.from("vocabulary_cards")
+        .select("id, term, meaning_vi, part_of_speech, cefr_level, ipa, example_en, example_vi, position")
+        .eq("set_id", id).order("position").order("id").range(offset, offset + 999);
+      if (error) throw new Error("Không thể tải đầy đủ thẻ. Vui lòng thử lại.");
+      cardsRows.push(...(data || []));
+      if (!data || data.length < 1000) break;
+    }
 
     cards = (cardsRows || []).map((c) => ({
       id: c.id,
@@ -316,4 +320,8 @@ export default async function SetDetailPage({ params }: SetDetailPageProps) {
       </div>
     </AppShell>
   );
+}
+
+export default function SetDetailPage(props: SetDetailPageProps) {
+  return <Suspense fallback={<AppShell><p>Đang tải học phần...</p></AppShell>}><SetDetailContent {...props} /></Suspense>;
 }

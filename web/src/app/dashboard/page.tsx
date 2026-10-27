@@ -6,7 +6,7 @@ import { AppShell } from "@/components/layout/AppShell";
 import { Card } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
-import { DEMO_SETS } from "@/data/demo/vocabulary.demo";
+
 import type { UserStatsSummary } from "@/features/stats/stats.types";
 import {
   LayoutDashboard,
@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 
 export default function DashboardPage() {
+  const [sets, setSets] = useState<Array<{ id: string; title: string; cefrLevel: string; cardCount: number }>>([]);
+  const [loadError, setLoadError] = useState<string | null>(null);
   const [stats, setStats] = useState<UserStatsSummary | null>(null);
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -36,6 +38,10 @@ export default function DashboardPage() {
           if (isMounted && json.data) {
             setStats(json.data);
             setIsAuthenticated(true);
+            const setResponse = await fetch("/api/sets?scope=user&pageSize=50");
+            if (!setResponse.ok) throw new Error("Không tải được học phần của bạn.");
+            const setJson = await setResponse.json();
+            if (isMounted) setSets(setJson.data.map((row: { id: string; title: string; cefr_level: string; card_count: number }) => ({ id: row.id, title: row.title, cefrLevel: row.cefr_level, cardCount: row.card_count })));
           }
         } else {
           // Guest or unauthenticated
@@ -44,7 +50,7 @@ export default function DashboardPage() {
           }
         }
       } catch {
-        if (isMounted) setIsAuthenticated(false);
+        if (isMounted) setLoadError("Chưa tải được dữ liệu. Hãy thử tải lại trang.");
       } finally {
         if (isMounted) setIsLoading(false);
       }
@@ -59,11 +65,12 @@ export default function DashboardPage() {
   // Format active minutes
   const activeMinutes = stats
     ? Math.round(stats.totalActiveSeconds / 60)
-    : 42;
+    : 0;
 
   return (
     <AppShell>
       <div className="space-y-8">
+        {loadError && <p role="alert">{loadError} <button onClick={() => window.location.reload()}>Thử lại</button></p>}
         {/* Header */}
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
@@ -98,7 +105,7 @@ export default function DashboardPage() {
           <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div className="space-y-1">
               <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                Bạn đang xem dữ liệu minh họa chế độ Khách
+                Đăng nhập để xem tiến độ của bạn
               </p>
               <p className="text-xs text-amber-700 dark:text-amber-400">
                 Đăng nhập hoặc đăng ký tài khoản để lưu trữ chuỗi học tập, độ chính xác và lịch sử phiên học của riêng bạn.
@@ -123,7 +130,7 @@ export default function DashboardPage() {
               <Flame className="w-4 h-4 text-orange-500" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-zinc-50">
-              {stats ? stats.streakDays : 5}{" "}
+              {stats ? stats.streakDays : 0}{" "}
               <span className="text-sm font-normal text-zinc-400">ngày</span>
             </p>
             <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
@@ -137,11 +144,11 @@ export default function DashboardPage() {
               <BookOpen className="w-4 h-4 text-teal-500" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-zinc-50">
-              {stats ? stats.totalMasteredWords : 20}{" "}
+              {stats ? stats.totalMasteredWords : 0}{" "}
               <span className="text-sm font-normal text-zinc-400">từ</span>
             </p>
             <p className="text-[11px] text-zinc-500">
-              {stats ? `${stats.totalLearningWords} từ đang học` : "Mẫu demo A1–B1"}
+              {stats ? `${stats.totalLearningWords} từ đang học` : "Chưa có dữ liệu"}
             </p>
           </Card>
 
@@ -151,11 +158,11 @@ export default function DashboardPage() {
               <Gamepad2 className="w-4 h-4 text-amber-500" />
             </div>
             <p className="text-2xl sm:text-3xl font-black text-amber-500">
-              {stats && stats.bestArcadeScore > 0 ? stats.bestArcadeScore.toLocaleString() : "1,450"}{" "}
+              {stats && stats.bestArcadeScore > 0 ? stats.bestArcadeScore.toLocaleString() : "0"}{" "}
               <span className="text-sm font-normal text-zinc-400">điểm</span>
             </p>
             <p className="text-[11px] text-zinc-500">
-              {stats ? `Độ chính xác ${stats.accuracyRate}%` : "Độ chính xác 96%"}
+              {stats ? `Độ chính xác ${stats.accuracyRate}%` : "Chưa có thống kê"}
             </p>
           </Card>
 
@@ -186,8 +193,9 @@ export default function DashboardPage() {
             </Link>
           </div>
 
+          {!sets.length && <p>Chưa có học phần của bạn. Hãy tạo bộ thẻ hoặc khám phá học phần công khai.</p>}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {DEMO_SETS.slice(0, 2).map((set) => (
+            {sets.map((set) => (
               <Card key={set.id} className="space-y-4">
                 <div className="flex items-start justify-between gap-3">
                   <div>
@@ -210,22 +218,6 @@ export default function DashboardPage() {
                       Chơi
                     </Button>
                   </Link>
-                </div>
-
-                {/* Progress bar */}
-                <div className="space-y-1.5">
-                  <div className="flex justify-between text-xs text-zinc-500">
-                    <span>Tiến độ ghi nhớ</span>
-                    <span className="font-semibold text-zinc-700 dark:text-zinc-300">
-                      15/20 từ (75%)
-                    </span>
-                  </div>
-                  <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                    <div
-                      className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full"
-                      style={{ width: "75%" }}
-                    />
-                  </div>
                 </div>
 
                 <div className="flex items-center gap-2 pt-1">

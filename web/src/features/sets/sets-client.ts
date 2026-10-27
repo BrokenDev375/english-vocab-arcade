@@ -1,5 +1,7 @@
 import { DEMO_SETS, DEMO_CARDS } from "@/data/demo/vocabulary.demo";
 
+export const isDemoSetId = (id: string) => DEMO_SETS.some(set => set.id === id);
+
 export interface ClientCardItem {
   id: string;
   setId?: string;
@@ -22,7 +24,7 @@ export async function fetchAllSetCards(setId: string): Promise<ClientCardItem[]>
   if (!setId) return [];
 
   // Demo fallback only for explicit demo IDs
-  if (setId.startsWith("d000")) {
+  if (isDemoSetId(setId)) {
     const demo = DEMO_SETS.find((s) => s.id === setId);
     const demoCards = demo?.cards || DEMO_CARDS;
     return demoCards.map((c) => ({
@@ -52,7 +54,8 @@ export async function fetchAllSetCards(setId: string): Promise<ClientCardItem[]>
       }
 
       const res = await fetch(url);
-      if (!res.ok) break;
+      if (res.status === 404) throw new Error("Không tìm thấy học phần hoặc bạn không có quyền truy cập.");
+      if (!res.ok) throw new Error(`Không tải được đầy đủ thẻ (${res.status}). Vui lòng thử lại.`);
 
       const json = await res.json();
       interface RawCardApiItem {
@@ -97,7 +100,7 @@ export async function fetchAllSetCards(setId: string): Promise<ClientCardItem[]>
       cursorId = json.meta.nextCursor.id;
     }
   } catch (err) {
-    console.warn("Failed to fetch cards for set", setId, err);
+    throw err;
   }
 
   return allCards;
