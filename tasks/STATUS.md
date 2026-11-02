@@ -9,7 +9,7 @@ Cập nhật ban đầu: 26/10/2026.
 ## Hiện trạng đã xác minh — cập nhật 02/11/2026
 
 - Đang triển khai yêu cầu đưa giao diện và luồng học tiếng Anh về gần bản Quizlet clone gốc, giữ backend tiếng Anh và Word Blaster. Bổ sung Hội thoại A/B; xem [báo cáo](../reports/quizlet-parity-20261102.md).
-- Bản giao diện mới ecd179f đã push/deploy: lint, TypeScript, 119 unit, production build PASS; 7 kiểm tra Edge local và 7 kiểm tra live guest/demo PASS. CI đầu tiên: integration/build PASS, 19/20 E2E PASS; lỗi selector đếm DOM ẩn đã tái hiện và sửa, chờ CI chạy lại. Docker được giữ đóng theo trao đổi với chủ máy.
+- Bản code chốt `a6b221f14221e6e1c730633ae460b84c25c22231` đã push main, CI SUCCESS và Vercel Ready: lint, TypeScript, 119 unit, 50 integration, production build và 20 E2E PASS. Live guest/demo ở 360/768/1440 px PASS. Docker được giữ đóng theo trao đổi với chủ máy; kiểm thử DB chạy trên CI Linux.
 - Chủ dự án đã chạy SQL sáu migrations; kiểm tra production ngày 30/10/2026: health 200 build 053982f, sets explore 200 (0 học phần public), auth/user 200. 0007 cho Hội thoại chưa áp dụng production; các migrations cũ giữ nguyên.
 
 - [x] Kế hoạch, đặc tả và runbook bàn giao.
@@ -29,7 +29,7 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | Ticket | Status | Evidence/blocker |
 |---|---|---|
 | T00 | DONE | web/ bootstrap Next 16.4.3, React 19, Vitest, Zod, Node 24.x; lint/typecheck/test/build PASS |
-| T01 | DOING | UI parity 02/11: indigo header/search/create, library, inline flashcards, modes hub, dialogue A/B. Local lint/typecheck/build + demo browser checks PASS. Chờ CI full integration/E2E và deployment mới. |
+| T01 | DONE | UI parity 02/11: indigo header/search/create, library, inline flashcards, modes hub, dialogue A/B. CI a6b221f gồm 20 E2E PASS; live guest/demo 360/768/1440 px PASS, Vercel Ready. |
 | T02 | DONE | Migrations 0001_core and 0002_auth_and_rls applied to local Supabase; generated types; D01-D04/D12/D14/D15 passed |
 | T03 | DONE | Migrations 0003_study and 0004_ai applied; generated types; D05-D11/D16 passed; privileged RPCs and quotas tested |
 | T04 | DONE | Auth SSR browser/server/admin clients, signup/login/logout/callback/confirm handlers, E01 passed, safe redirects, server-only secret protection |
@@ -47,9 +47,9 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | T16 | DONE | English exercises (grammar unscramble, reading comprehension, contextual translation), zero HSK/pinyin, acceptedTokenOrders & reference matching; 4 unit tests + 34 routes compiled |
 | T17 | DONE | Speech adapter (TTS 1.0x/0.75x, Web Speech STT, token grading, substring rejection, keyboard fallback), /dictation and /speak routes; 6 unit tests + 36 routes compiled |
 | T18 | UNVERIFIED | 32 cards for internal smoke tests only; public beta requires >=300 cards and independent content review. Metadata/hash tests do not verify linguistic accuracy. |
-| T19 | DOING | CI ecd179f: lint/typecheck/119 unit/integration/build PASS; 19/20 E2E PASS. Ca tìm kiếm đếm DOM ẩn; selector accessible đã sửa, chờ CI chạy lại. 7 live guest/demo browser checks PASS. |
+| T19 | DOING | CI a6b221f SUCCESS: scanner/handoff/SQL/lint/typecheck, 119 unit, 50 integration, build, 20 E2E PASS. Manual provider/micro/thiết bị thật và QA học liệu production chưa xác minh. |
 | T20 | DOING | Bộ SQL 0001–0006 đã chạy trên production theo chủ dự án, API sets 200. Bộ gộp cập nhật thêm 0007 cho Hội thoại; chờ áp dụng production, không reset hay sửa migration cũ. |
-| T21 | DOING | ecd179f đã push main, Vercel Ready, health 200 đúng SHA; giao diện mới và Hội thoại demo đã smoke thật. Hội thoại với DB cần 0007; provider thật cần smoke riêng. |
+| T21 | DOING | a6b221f đã push main, CI SUCCESS, Vercel Ready; giao diện mới và Hội thoại demo đã smoke thật. Hội thoại với DB cần 0007; provider thật cần smoke riêng. |
 | T22 | DOING | UI ecd179f: health/sets/auth-user 200, 7 smoke guest/demo thật PASS. Chờ Hội thoại với DB sau migration 0007 và provider thật. |
 
 Status hợp lệ: TODO, DOING, DONE, BLOCKED, UNVERIFIED.
