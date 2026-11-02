@@ -6,7 +6,11 @@ Cập nhật ban đầu: 26/10/2026.
 
 Đã chuyển từ thư mục LTM ngày 26/10/2026 và cập nhật đường dẫn bàn giao. Trạng thái triển khai ứng dụng không thay đổi.
 
-## Hiện trạng đã xác minh — cập nhật 27/10/2026
+## Hiện trạng đã xác minh — cập nhật 02/11/2026
+
+- Đang triển khai yêu cầu đưa giao diện và luồng học tiếng Anh về gần bản Quizlet clone gốc, giữ backend tiếng Anh và Word Blaster. Bổ sung Hội thoại A/B; xem [báo cáo](../reports/quizlet-parity-20261102.md).
+- Bản giao diện mới: lint, TypeScript, 119 unit, production build PASS; 7 kiểm tra Edge desktop/mobile với guest mock và dữ liệu demo PASS. Kiểm thử database/tài khoản chuyển sang CI vì chủ máy đã đóng Docker sau thông báo WSL. Chưa ghi nhận full integration/E2E của bản mới là PASS.
+- Chủ dự án đã chạy SQL sáu migrations; kiểm tra production ngày 30/10/2026: health 200 build 053982f, sets explore 200 (0 học phần public), auth/user 200. 0007 cho Hội thoại chưa áp dụng production; các migrations cũ giữ nguyên.
 
 - [x] Kế hoạch, đặc tả và runbook bàn giao.
 - [x] Bản sửa F01–F08 đã push origin/main: `1f1357d7114cc564a351051f16f297e3b0dc67d6`.
@@ -15,7 +19,7 @@ Cập nhật ban đầu: 26/10/2026.
 - [x] Sửa F01–F08; xem [nghiệm thu](../reports/fix-verification-20261027.md) và [evidence](../reports/fix-verification-20261027-evidence.json).
 - [x] [GitHub Actions của 1f1357d](https://github.com/BrokenDev375/english-vocab-arcade/actions/runs/40515481988) success; Vercel deployment success, `/api/health` trả đúng build SHA.
 - [x] Bộ SQL Editor cài đủ 6 migrations đã thử trên database tạm: cài mới, chạy lại, grants, backfill và guard PASS. Xem [hướng dẫn](../supabase/manual/README.md).
-- [ ] Production `/api/sets` đang trả 500: thiếu `public.learning_sets` trong schema cache. Chưa chạy SQL lên Supabase production.
+- [x] Sau khi chủ dự án chạy SQL, production `/api/sets` trả 200 ngày 30/10/2026, hết lỗi schema cache. 0007 chưa áp dụng production.
 - [ ] Provider Gemini thật, thiết bị âm thanh/mobile thật, học liệu public beta >=300 thẻ và duyệt độc lập.
 
 Các log phía dưới là lịch sử. Kiểm thử local không thay thế các bằng chứng production.
@@ -25,7 +29,7 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | Ticket | Status | Evidence/blocker |
 |---|---|---|
 | T00 | DONE | web/ bootstrap Next 16.4.3, React 19, Vitest, Zod, Node 24.x; lint/typecheck/test/build PASS |
-| T01 | DONE | Design system UI shell, 20 demo cards, responsive 360/768/1440px, privacy on explore, routes /, /explore, /dashboard, /sets/[id], /arcade, /login, /signup pass lint/typecheck/test/build |
+| T01 | DOING | UI parity 02/11: indigo header/search/create, library, inline flashcards, modes hub, dialogue A/B. Local lint/typecheck/build + demo browser checks PASS. Chờ CI full integration/E2E và deployment mới. |
 | T02 | DONE | Migrations 0001_core and 0002_auth_and_rls applied to local Supabase; generated types; D01-D04/D12/D14/D15 passed |
 | T03 | DONE | Migrations 0003_study and 0004_ai applied; generated types; D05-D11/D16 passed; privileged RPCs and quotas tested |
 | T04 | DONE | Auth SSR browser/server/admin clients, signup/login/logout/callback/confirm handlers, E01 passed, safe redirects, server-only secret protection |
@@ -43,24 +47,24 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | T16 | DONE | English exercises (grammar unscramble, reading comprehension, contextual translation), zero HSK/pinyin, acceptedTokenOrders & reference matching; 4 unit tests + 34 routes compiled |
 | T17 | DONE | Speech adapter (TTS 1.0x/0.75x, Web Speech STT, token grading, substring rejection, keyboard fallback), /dictation and /speak routes; 6 unit tests + 36 routes compiled |
 | T18 | UNVERIFIED | 32 cards for internal smoke tests only; public beta requires >=300 cards and independent content review. Metadata/hash tests do not verify linguistic accuracy. |
-| T19 | DOING | CI 1f1357d success; local 114 unit, 47 integration, build, scanner và browser checks có bằng chứng. Bộ SQL Editor bổ sung đã kiểm tra riêng; CI của commit tiếp theo cần xác minh sau push. |
-| T20 | DOING | Project qtqvytchmlqojolkobmw xác định từ public client bundle. 6 migrations local PASS; SQL Editor bundle chuẩn bị và kiểm thử xong. Chờ chạy file trên Dashboard; chưa thay đổi production. |
-| T21 | DOING | Origin/main 1f1357d đã push, Vercel deployment success, health 200 đúng SHA tại english-vocab-arcade.vercel.app. Website chưa hoàn thành do Data API lỗi schema; Auth/AI cần smoke thực tế. |
-| T22 | DOING | Smoke read-only production: health 200, auth/user 200, sets explore 500. Chờ hoàn tất schema rồi kiểm tra luồng Auth/CRUD/học/AI. |
+| T19 | DOING | Bản UI mới local: 119 unit, lint/typecheck/build, 7 demo browser checks PASS. Full integration và 20 E2E được thêm vào CI; chờ chạy sau push. |
+| T20 | DOING | Bộ SQL 0001–0006 đã chạy trên production theo chủ dự án, API sets 200. Bộ gộp cập nhật thêm 0007 cho Hội thoại; chờ áp dụng production, không reset hay sửa migration cũ. |
+| T21 | DOING | Production 053982f health 200. UI parity và Hội thoại mới đang kiểm tra trước push/deploy; Auth/AI provider thật cần smoke riêng. |
+| T22 | DOING | Ngày 30/10: health 200, auth/user 200, sets explore 200. Chờ smoke deployment UI mới và mode Hội thoại sau migration 0007. |
 
 Status hợp lệ: TODO, DOING, DONE, BLOCKED, UNVERIFIED.
 Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi điều kiện thiếu và việc độc lập còn làm được.
 
 ## Thông tin triển khai
 
-- Source deployed: 1f1357d7114cc564a351051f16f297e3b0dc67d6 (main); bộ SQL Editor/migration 0006 là phần bổ sung tiếp theo.
+- Source deployed xác minh 30/10: 053982f8b77349e6e749475df4bdc76a747146bb; UI parity/migration 0007 là lượt bổ sung hiện tại.
 - GitHub repository: https://github.com/BrokenDev375/english-vocab-arcade
 - Supabase project ref: qtqvytchmlqojolkobmw (Local stack: 127.0.0.1:54321)
 - Supabase production URL: https://qtqvytchmlqojolkobmw.supabase.co
 - Vercel project/team: thanh-djts-projects/english-vocab-arcade (Root: web)
 - Production stable URL: https://english-vocab-arcade.vercel.app
-- Deployment commit/build SHA: 1f1357d7114cc564a351051f16f297e3b0dc67d6 (health 200)
-- Last production smoke: 27/10/2026, chỉ read-only; sets explore 500 vì schema cache không có learning_sets.
+- Deployment commit/build SHA đã kiểm tra: 053982f8b77349e6e749475df4bdc76a747146bb (health 200)
+- Last production smoke: 30/10/2026, chỉ read-only; sets explore 200, auth/user 200.
 - Gemini provider thật trên production: UNVERIFIED. Fallback chỉ dùng khi cấu hình rõ; báo cáo provider cũ không chứng minh provider hoạt động ở deployment hiện tại.
 - Dataset internal/smoke count: 32 thẻ; kiểm duyệt ngôn ngữ độc lập và bộ public beta >=300 thẻ chưa xác minh.
 

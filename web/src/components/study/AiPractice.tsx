@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/Button";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { SyncNotice } from "./SyncNotice";
+import { StudyHeader } from "./StudyHeader";
 import { useStudySession } from "@/features/study/use-study-session";
 import { fetchAllSetCards, isDemoSetId } from "@/features/sets/sets-client";
 import { requestAiBatch } from "@/features/ai/ai-client";
@@ -68,16 +69,16 @@ export function AiPractice({ mode }: { mode: "grammar" | "reading" | "translatio
     sync.record({ clientEventId: sync.newEventId(), cardId, mode: "learn", questionType: grammar ? "scramble" : question ? "multiple_choice" : "type_in", userAnswer: submitted, isCorrect: correct, durationMs: elapsedTime(), answeredAt: new Date().toISOString() }, `ai:${batchId}:${currentIndex}`);
   };
   const label = mode === "grammar" ? "Sắp xếp câu" : mode === "reading" ? "Đọc hiểu" : "Dịch theo ngữ cảnh";
-  return <AppShell><SyncNotice message={sync.error} ready={sync.ready} retry={sync.retry} />
+  return <AppShell showDemoBanner={isDemoSetId(id)}><SyncNotice message={sync.error} ready={sync.ready} retry={sync.retry} />
     {error ? <><ErrorAlert message={error} /><Button onClick={() => window.location.reload()}>Thử lại</Button><Link href={`/sets/${id}`}> Quay lại học phần</Link></> : loading || !sync.ready ? <LoadingState message="Đang chuẩn bị và khôi phục bài tập..." /> : <div className="max-w-3xl mx-auto space-y-5">
-      <Link href={`/sets/${id}`}>← Quay lại học phần</Link><h1 className="text-2xl font-bold">{label}</h1>
+      <StudyHeader setId={id} title={label} current={currentIndex + 1} total={total} />
       {batchId === "demo" && <p>Đây là bài tập mẫu.</p>}
-      <p>Câu {currentIndex + 1}/{total} · Đúng {Object.values(answers).filter(v => v.correct).length}/{total}</p>
-      {reading && <article className="rounded-xl border p-5 space-y-3"><h2 className="font-bold">{reading.title}</h2><p>{reading.passageEn}</p><details><summary>Xem bản dịch tham khảo</summary>{reading.translationVi}</details></article>}
+      <p className="rounded-full bg-indigo-500/5 px-4 py-2 text-xs font-semibold text-indigo-600 dark:text-indigo-300">Câu {currentIndex + 1}/{total} · Đúng {Object.values(answers).filter(v => v.correct).length}/{total}</p>
+      {reading && <article className="rounded-2xl border border-zinc-200 bg-white p-6 space-y-4 shadow-sm dark:border-zinc-800 dark:bg-zinc-900"><h2 className="text-xl font-extrabold">{reading.title}</h2><p className="text-base leading-loose">{reading.passageEn}</p><details className="rounded-xl bg-zinc-50 p-3 text-sm dark:bg-zinc-800"><summary className="cursor-pointer font-semibold text-indigo-600 dark:text-indigo-300">Xem bản dịch tham khảo</summary><p className="mt-3 leading-relaxed text-zinc-500">{reading.translationVi}</p></details></article>}
       {grammar && <><p>{grammar.sentenceVi}</p><div className="flex gap-2 flex-wrap min-h-12 rounded-xl border p-3">{selectedTokens.map((index, i) => <button disabled={!!answer} key={`${index}-${i}`} onClick={() => setSelectedTokens(v => v.filter((_, n) => n !== i))}>{grammar.tokens[index]}</button>)}</div><div className="flex flex-wrap gap-2">{tokens.filter(token => !selectedTokens.includes(token.index)).map(token => <Button variant="outline" disabled={!!answer} key={token.index} onClick={() => setSelectedTokens(v => [...v, token.index])}>{token.word}</Button>)}</div><Button disabled={!!answer || !selectedTokens.length} onClick={() => submit(selectedTokens.map(index => grammar.tokens[index]).join(" "))}>Kiểm tra</Button><details><summary>Gợi ý</summary>{grammar.hintVi}</details></>}
       {translation && <><p>{translation.promptVi}</p><form onSubmit={e => { e.preventDefault(); submit(text); }} className="space-y-3"><input aria-label="Bản dịch tiếng Anh" className="w-full rounded-xl border p-3 bg-transparent" disabled={!!answer} value={text} onChange={e => setText(e.target.value)} /><Button disabled={!!answer || !text.trim()} type="submit">Kiểm tra</Button></form><p className="text-xs">Kết quả thể hiện mức khớp đáp án tham chiếu; các cách dịch khác vẫn có thể đúng.</p><details><summary>Gợi ý từ</summary>{translation.hints.map(h => <p key={h.word}>{h.word}: {h.meaningVi}</p>)}</details></>}
       {question && <><h2>{question.questionEn}</h2><div className="grid gap-2">{question.options.map((option, i) => <Button variant="outline" disabled={!!answer} key={i} onClick={() => submit(String(i))}>{option}</Button>)}</div></>}
-      {answer && <div role="status" className="rounded-xl border p-4"><p>{answer.correct ? "Chính xác" : "Chưa khớp đáp án"}</p><p>{grammar?.sentenceEn || translation?.referenceEn || question?.options[question.correctIndex]}</p><p>{grammar?.explanationVi || translation?.explanationVi || question?.explanationVi}</p></div>}
+      {answer && <div role="status" className={`rounded-2xl border p-5 space-y-2 ${answer.correct ? "border-emerald-500/20 bg-emerald-500/5" : "border-amber-500/20 bg-amber-500/5"}`}><p className="font-bold">{answer.correct ? "Chính xác" : "Chưa khớp đáp án"}</p><p className="font-semibold">{grammar?.sentenceEn || translation?.referenceEn || question?.options[question.correctIndex]}</p><p className="text-sm leading-relaxed text-zinc-500">{grammar?.explanationVi || translation?.explanationVi || question?.explanationVi}</p></div>}
       {answer && currentIndex + 1 < total && <Button onClick={() => { setCurrentIndex(v => v + 1); setText(""); setSelectedTokens([]); }}>Câu tiếp theo</Button>}
       {completed && <><p>Đã hoàn thành bài tập.</p><Button onClick={() => { void sync.restart(() => { setAnswers({}); setCurrentIndex(0); setText(""); setSelectedTokens([]); }); }}>Làm lại</Button></>}
     </div>}

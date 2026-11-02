@@ -1,81 +1,53 @@
-import React from "react";
 import Link from "next/link";
-import { Gamepad2, ShieldCheck, Heart } from "lucide-react";
+import { Sparkles } from "lucide-react";
 
-export const Footer: React.FC = () => {
+export function Footer() {
   return (
-    <footer className="border-t border-zinc-200 dark:border-zinc-800/80 bg-zinc-50 dark:bg-zinc-950/80 text-zinc-600 dark:text-zinc-400 py-12 transition-colors">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
-          {/* Brand info */}
-          <div className="md:col-span-2 space-y-3">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-lg bg-teal-600 dark:bg-teal-500 flex items-center justify-center text-white dark:text-zinc-950">
-                <Gamepad2 className="w-4 h-4" />
-              </div>
-              <span className="font-bold text-zinc-900 dark:text-zinc-100 text-base">
-                English Vocab Arcade
-              </span>
-            </div>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 max-w-sm leading-relaxed">
-              Nền tảng học từ vựng và câu tiếng Anh A1–B1 dành riêng cho người Việt. Kết hợp phương pháp lặp lại ngắt quãng và minigame gõ từ phản xạ.
-            </p>
-            <div className="flex items-center gap-2 text-xs text-teal-600 dark:text-teal-400 font-medium">
-              <ShieldCheck className="w-4 h-4" />
-              <span>Bảo mật dữ liệu riêng tư & kiến trúc RLS</span>
-            </div>
-          </div>
-
-          {/* Quick links */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-200 mb-3">
-              Chế độ học
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <Link href="/explore" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
-                  Khám phá bộ từ
-                </Link>
-              </li>
-              <li>
-                <Link href="/sets/d0000000-0001-4000-8000-000000000001/arcade" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
-                  Word Blaster (Arcade)
-                </Link>
-              </li>
-              <li>
-                <Link href="/dashboard" className="hover:text-teal-600 dark:hover:text-teal-400 transition-colors">
-                  Tiến độ cá nhân
-                </Link>
-              </li>
-            </ul>
-          </div>
-
-          {/* Standards & Info */}
-          <div>
-            <h4 className="text-xs font-semibold uppercase tracking-wider text-zinc-900 dark:text-zinc-200 mb-3">
-              Thông tin
-            </h4>
-            <ul className="space-y-2 text-sm">
-              <li>
-                <span className="text-zinc-500 dark:text-zinc-400">Khung tham chiếu CEFR A1–B1</span>
-              </li>
-              <li>
-                <span className="text-zinc-500 dark:text-zinc-400">Không quảng cáo & không theo dõi</span>
-              </li>
-              <li>
-                <span className="text-zinc-500 dark:text-zinc-400">Phiên bản beta 1.0 (2026)</span>
-              </li>
-            </ul>
-          </div>
-        </div>
-
-        <div className="pt-8 border-t border-zinc-200 dark:border-zinc-800/80 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-zinc-500 dark:text-zinc-500">
-          <p>© 2026 English Vocab Arcade. Thiết kế và phát triển độc lập.</p>
-          <p className="flex items-center gap-1">
-            Xây dựng với <Heart className="w-3.5 h-3.5 text-rose-500 fill-rose-500" /> cho người học tiếng Anh Việt Nam.
+    <footer className="mt-12 border-t border-zinc-200 bg-white py-10 dark:border-zinc-800 dark:bg-zinc-950">
+      <div className="mx-auto grid max-w-7xl gap-8 px-4 sm:grid-cols-3 sm:px-6 lg:px-8">
+        <div className="space-y-3">
+          <Link
+            href="/"
+            className="inline-flex items-center gap-2 text-lg font-black text-indigo-600 dark:text-indigo-300"
+          >
+            <Sparkles className="size-5" />
+            Vocab Arcade
+          </Link>
+          <p className="max-w-sm text-sm leading-relaxed text-zinc-500">
+            Tạo học phần, ôn từ vựng và luyện các kỹ năng tiếng Anh A1–B1 theo
+            cách của bạn.
           </p>
+        </div>
+        <nav aria-label="Liên kết cuối trang" className="space-y-3 text-sm">
+          <p className="font-bold">Không gian học tập</p>
+          <Link
+            href="/explore"
+            className="block text-zinc-500 hover:text-indigo-600"
+          >
+            Khám phá học phần
+          </Link>
+          <Link
+            href="/dashboard"
+            className="block text-zinc-500 hover:text-indigo-600"
+          >
+            Thư viện của tôi
+          </Link>
+          <Link
+            href="/sets/new"
+            className="block text-zinc-500 hover:text-indigo-600"
+          >
+            Tạo học phần mới
+          </Link>
+        </nav>
+        <div className="space-y-3 text-sm">
+          <p className="font-bold">Học mỗi ngày một chút</p>
+          <p className="leading-relaxed text-zinc-500">
+            Thẻ ghi nhớ, học thích ứng, kiểm tra, ghép thẻ và Word Blaster trong
+            cùng một học phần.
+          </p>
+          <p className="text-xs text-zinc-400">© 2026 English Vocab Arcade</p>
         </div>
       </div>
     </footer>
   );
-};
+}

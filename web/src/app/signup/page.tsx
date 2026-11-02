@@ -72,7 +72,7 @@ export default function SignupPage() {
       <div className="max-w-md mx-auto py-8 sm:py-12">
         <Card className="space-y-6">
           <div className="text-center space-y-2">
-            <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+            <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
               <Gamepad2 className="w-6 h-6" />
             </div>
             <h1 className="text-2xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">
@@ -163,7 +163,7 @@ export default function SignupPage() {
           )}
 
           <div className="p-3.5 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-2">
-            <ShieldCheck className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+            <ShieldCheck className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
             <span>
               Chúng tôi tôn trọng quyền riêng tư. Hồ sơ cá nhân không bị công khai trên trang Khám phá.
             </span>
@@ -173,7 +173,7 @@ export default function SignupPage() {
             Đã có tài khoản?{" "}
             <Link
               href="/login"
-              className="font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+              className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
             >
               Đăng nhập tại đây
             </Link>

@@ -17,6 +17,7 @@ const CreateSessionSchema = z.object({
     "grammar",
     "reading",
     "translate",
+    "dialogue",
   ]),
   action: z.enum(["resume_or_create", "restart"]).default("resume_or_create"),
   settings: z.record(z.string(), z.unknown()).optional(),

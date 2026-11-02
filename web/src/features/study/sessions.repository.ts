@@ -1,6 +1,6 @@
 import "server-only";
 import { gradeSpeechTranscript } from "@/features/audio/speech-adapter";
-import { GrammarOutputSchema, ReadingOutputSchema, TranslationOutputSchema } from "@/features/ai/schemas";
+import { GrammarOutputSchema, ReadingOutputSchema, TranslationOutputSchema, DialogueOutputSchema } from "@/features/ai/schemas";
 import { getSupabaseAdminClient } from "@/lib/supabase/admin.server";
 import { isAnswerCorrect } from "./answer-normalization";
 
@@ -15,7 +15,8 @@ export type SessionMode =
   | "speak"
   | "grammar"
   | "reading"
-  | "translate";
+  | "translate"
+  | "dialogue";
 
 export type SessionStatus = "active" | "paused" | "completed" | "abandoned";
 
@@ -169,6 +170,7 @@ export async function createOrResumeSession(
     if (concurrent) return { session: concurrent as unknown as SessionRecord, isNew: false };
   }
   if (insertError || !newSession) {
+    if (mode === "dialogue" && insertError?.code === "23514") throw new Error("Hội thoại hiện chưa được bật. Bạn vẫn có thể dùng các chế độ học khác.");
     throw new Error(insertError?.message || "Failed to create study session");
   }
 
@@ -364,7 +366,7 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
     gradeSource = "rule";
   } else if (session.mode === "speak") {
     isCorrect = gradeSpeechTranscript(userAnswer, targetCard.term, targetCard.accepted_answers || []).isMatch;
-  } else if (["grammar", "reading", "translate"].includes(session.mode)) {
+  } else if (["grammar", "reading", "translate", "dialogue"].includes(session.mode)) {
     const key = /^ai:([0-9a-f-]{36}):(\d+)$/i.exec(questionKey);
     if (!key) return { success: false, code: "INVALID_ANSWER", error: "Thiếu bài tập tham chiếu." };
     const { data: batch } = await adminClient.from("ai_batches").select("output,mode")
@@ -381,6 +383,12 @@ export async function recordServerAttempt(params: RecordAttemptParams): Promise<
       const ex = parsed.success ? parsed.data.exercises[index] : null;
       if (!ex || ex.cardId !== cardId) return { success: false, code: "INVALID_CARD_MEMBERSHIP" };
       isCorrect = isAnswerCorrect(userAnswer, ex.referenceEn, ex.acceptedAnswers);
+    } else if (session.mode === "dialogue") {
+      const parsed = DialogueOutputSchema.safeParse(batch.output);
+      const turn = parsed.success ? parsed.data.turns[index] : null;
+      if (!turn || turn.cardId !== cardId) return { success: false, code: "INVALID_CARD_MEMBERSHIP" };
+      isCorrect = isAnswerCorrect(userAnswer, turn.textEn);
+      gradeSource = "rule";
     } else {
       const parsed = ReadingOutputSchema.safeParse(batch.output);
       const question = parsed.success ? parsed.data.questions[index] : null;

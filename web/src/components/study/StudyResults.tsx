@@ -40,7 +40,7 @@ export function StudyResults({
   return (
     <div className="max-w-xl mx-auto space-y-6 text-center animate-in zoom-in-95 duration-300">
       {/* Trophy Card */}
-      <Card className="p-8 space-y-6 border-2 border-teal-500/30 bg-gradient-to-b from-teal-50/30 via-white to-zinc-50 dark:from-teal-950/20 dark:via-zinc-900 dark:to-zinc-900 rounded-3xl shadow-xl">
+      <Card className="p-8 space-y-6 border-2 border-indigo-500/30 bg-gradient-to-b from-indigo-50/30 via-white to-zinc-50 dark:from-indigo-950/20 dark:via-zinc-900 dark:to-zinc-900 rounded-3xl shadow-xl">
         <div className="w-16 h-16 mx-auto rounded-3xl bg-amber-500/10 text-amber-500 flex items-center justify-center shadow-inner">
           <Trophy className="w-8 h-8" />
         </div>
@@ -58,7 +58,7 @@ export function StudyResults({
         <div className="grid grid-cols-2 gap-4 py-2">
           <div className="p-4 rounded-2xl bg-zinc-100/70 dark:bg-zinc-800/60">
             <p className="text-xs text-zinc-500">Độ chính xác</p>
-            <p className="text-3xl font-black text-teal-600 dark:text-teal-400 mt-1">
+            <p className="text-3xl font-black text-indigo-600 dark:text-indigo-400 mt-1">
               {accuracy}%
             </p>
           </div>
@@ -116,7 +116,7 @@ export function StudyResults({
         </div>
 
         <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-500 dark:text-zinc-400 bg-zinc-50 dark:bg-zinc-800/40 p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-800">
-          <Info className="w-3.5 h-3.5 shrink-0 text-teal-600 dark:text-teal-400" />
+          <Info className="w-3.5 h-3.5 shrink-0 text-indigo-600 dark:text-indigo-400" />
           <span>Tiến độ đã được ghi nhận cục bộ (localStorage). Đồng bộ máy chủ đám mây sẽ khả dụng sau khi hoàn tất kết nối T12.</span>
         </div>
 

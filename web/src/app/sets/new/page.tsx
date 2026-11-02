@@ -163,7 +163,7 @@ export default function NewSetPage() {
         {/* Set Information */}
         <Card className="space-y-4">
           <div className="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800 font-bold text-sm text-zinc-900 dark:text-zinc-100">
-            <BookPlus className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <BookPlus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Thông tin học phần</span>
           </div>
 
@@ -220,7 +220,7 @@ export default function NewSetPage() {
                 type="checkbox"
                 checked={isPublic}
                 onChange={(e) => setIsPublic(e.target.checked)}
-                className="w-5 h-5 rounded border-zinc-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                className="w-5 h-5 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
               />
               <label htmlFor="set-public" className="text-sm font-medium text-zinc-800 dark:text-zinc-200 cursor-pointer">
                 Công khai học phần trên trang Khám phá
@@ -324,7 +324,7 @@ export default function NewSetPage() {
         </div>
 
         <div className="p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 flex items-start gap-2">
-          <Info className="w-4 h-4 text-teal-500 shrink-0 mt-0.5" />
+          <Info className="w-4 h-4 text-indigo-500 shrink-0 mt-0.5" />
           <span>
             Học phần của bạn được lưu trữ an toàn. Khi công khai trên Khám phá, tên và thông tin tài khoản của bạn sẽ được ẩn hoàn toàn để bảo đảm tính riêng tư.
           </span>

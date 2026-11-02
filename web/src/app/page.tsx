@@ -1,223 +1,181 @@
-import React from "react";
 import Link from "next/link";
-import { AppShell } from "@/components/layout/AppShell";
-import { Button } from "@/components/ui/Button";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { DEMO_CARDS, DEMO_SETS } from "@/data/demo/vocabulary.demo";
 import {
-  Gamepad2,
-  Sparkles,
-  Zap,
-  BookOpen,
   ArrowRight,
-  ShieldCheck,
-  Target,
-  Layers,
+  BookOpen,
+  Brain,
   CheckCircle2,
+  Gamepad2,
+  Layers,
+  Plus,
+  Sparkles,
+  Trophy,
+  Zap,
 } from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
+import { DEMO_SETS, DEMO_CARDS } from "@/data/demo/vocabulary.demo";
 
+const features = [
+  {
+    icon: Layers,
+    title: "Thẻ ghi nhớ",
+    text: "Lật thẻ, nghe phát âm tiếng Anh và học từ qua ví dụ. Đánh dấu những từ đã nhớ để ôn tập thuận tiện.",
+    color: "bg-indigo-500/10 text-indigo-600",
+  },
+  {
+    icon: Brain,
+    title: "Chế độ Học",
+    text: "Luyện trắc nghiệm, gõ đáp án và ôn lại những từ còn nhầm. Tiếp tục đúng vị trí khi quay lại học.",
+    color: "bg-blue-500/10 text-blue-600",
+  },
+  {
+    icon: Trophy,
+    title: "Kiểm tra",
+    text: "Tự kiểm tra vốn từ, xem kết quả và dành thêm thời gian cho các từ chưa thuộc.",
+    color: "bg-emerald-500/10 text-emerald-600",
+  },
+  {
+    icon: Gamepad2,
+    title: "Ghép thẻ",
+    text: "Ghép từ với nghĩa qua từng chặng. Học hết bộ từ trong một lượt, mỗi thẻ xuất hiện một lần.",
+    color: "bg-orange-500/10 text-orange-600",
+  },
+];
 export default function HomePage() {
-  const sampleSet = DEMO_SETS[0];
-  const featuredCards = DEMO_CARDS.slice(0, 6);
-
+  const sample = DEMO_SETS[0];
+  const sampleCard = sample.cards?.[0] || DEMO_CARDS[0];
   return (
     <AppShell>
-      {/* Hero Section */}
-      <section className="relative overflow-hidden py-8 md:py-16">
-        <div className="absolute -top-24 -left-24 w-96 h-96 bg-teal-500/10 dark:bg-teal-500/20 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute top-1/2 -right-24 w-96 h-96 bg-amber-500/10 dark:bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="relative text-center max-w-3xl mx-auto space-y-6">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-teal-500/10 border border-teal-500/30 text-teal-700 dark:text-teal-300 text-xs font-semibold tracking-wide">
-            <Sparkles className="w-3.5 h-3.5 text-teal-500" />
-            <span>Nền tảng học từ vựng tiếng Anh thế hệ mới cho người Việt</span>
-          </div>
-
-          <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-zinc-950 dark:text-zinc-50 leading-[1.15]">
-            Học từ vựng A1–B1 qua{" "}
-            <span className="bg-gradient-to-r from-teal-600 via-emerald-500 to-teal-400 bg-clip-text text-transparent">
-              phản xạ
-            </span>{" "}
-            và{" "}
-            <span className="bg-gradient-to-r from-amber-500 to-orange-500 bg-clip-text text-transparent">
-              Arcade Minigame
+      <section className="relative overflow-hidden rounded-3xl px-4 py-12 text-center sm:py-20">
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute -top-16 left-1/2 -z-0 h-80 w-[36rem] -translate-x-1/2 rounded-full bg-gradient-to-r from-indigo-500/10 via-blue-400/10 to-purple-500/10 blur-3xl"
+        />
+        <div className="relative mx-auto max-w-4xl space-y-6">
+          <span className="inline-flex items-center gap-2 rounded-full border border-indigo-500/20 bg-indigo-500/5 px-4 py-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-300">
+            <Sparkles className="size-3.5" />
+            Không gian học tiếng Anh của bạn
+          </span>
+          <h1 className="text-balance text-4xl font-black leading-tight tracking-tight sm:text-6xl">
+            Học từ vựng dễ hơn cùng{" "}
+            <span className="bg-gradient-to-r from-indigo-600 via-blue-600 to-cyan-500 bg-clip-text text-transparent">
+              thẻ ghi nhớ
             </span>
           </h1>
-
-          <p className="text-base sm:text-lg text-zinc-600 dark:text-zinc-400 max-w-2xl mx-auto leading-relaxed">
-            Ghi nhớ từ vựng tiếng Anh tự nhiên với phương pháp ngắt quãng khoa học, lật thẻ Flashcard, ghép cặp thông minh và game gõ từ bắn mục tiêu <strong>Word Blaster</strong>.
+          <p className="mx-auto max-w-2xl text-base leading-relaxed text-zinc-500 sm:text-lg">
+            Tạo học phần của riêng bạn, luyện nghe nói và ghi nhớ từ vựng tiếng
+            Anh A1–B1. Một bộ thẻ, nhiều cách học mỗi ngày.
           </p>
-
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
-            <Link href={`/sets/${sampleSet.id}/arcade`} className="w-full sm:w-auto">
-              <Button variant="amber" size="lg" className="w-full sm:w-auto shadow-lg shadow-amber-500/20">
-                <Gamepad2 className="w-5 h-5 mr-2" />
-                Chơi thử Word Blaster
-              </Button>
+          <div className="flex flex-col justify-center gap-3 pt-2 sm:flex-row">
+            <Link
+              href="/sets/new"
+              className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 px-6 py-3.5 font-bold text-white shadow-lg shadow-indigo-500/20 hover:from-indigo-700 hover:to-blue-700"
+            >
+              <Plus className="size-5" />
+              Tạo học phần miễn phí
             </Link>
-            <Link href="/explore" className="w-full sm:w-auto">
-              <Button variant="outline" size="lg" className="w-full sm:w-auto">
-                <BookOpen className="w-5 h-5 mr-2" />
-                Khám phá bộ từ vựng
-              </Button>
+            <Link
+              href="/explore"
+              className="inline-flex items-center justify-center gap-2 rounded-full border border-zinc-200 bg-white px-6 py-3.5 font-semibold hover:bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900 dark:hover:bg-zinc-800"
+            >
+              <BookOpen className="size-5" />
+              Khám phá kho học phần
             </Link>
           </div>
         </div>
       </section>
-
-      {/* Feature Highlights Grid */}
-      <section className="py-12 border-t border-zinc-200/80 dark:border-zinc-800/80">
-        <div className="text-center max-w-2xl mx-auto mb-10">
-          <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-            Học tập đa phương thức, nhớ lâu không áp lực
+      <section className="mx-auto grid max-w-5xl items-center gap-8 py-10 md:grid-cols-2">
+        <Link
+          href={`/sets/${sample.id}`}
+          aria-label="Học thử bộ thẻ mẫu"
+          className="group relative block rounded-2xl border border-indigo-200 bg-white p-8 text-center shadow-xl shadow-indigo-500/10 transition hover:-translate-y-1 dark:border-indigo-900 dark:bg-zinc-900"
+        >
+          <span className="absolute left-5 top-4 text-xs font-semibold text-zinc-400">
+            THẺ GHI NHỚ · TIẾNG ANH
+          </span>
+          <Layers className="mx-auto mb-4 mt-5 size-8 text-indigo-500" />
+          <span className="block text-4xl font-black">{sampleCard.term}</span>
+          <span className="mt-2 block font-mono text-sm text-zinc-400">
+            {sampleCard.ipa}
+          </span>
+          <span className="mt-5 block text-xl font-semibold text-indigo-600 dark:text-indigo-300">
+            {sampleCard.meaningVi}
+          </span>
+          <span className="mt-6 inline-flex items-center gap-1 text-xs text-zinc-500">
+            Học thử bộ thẻ mẫu
+            <ArrowRight className="size-3.5" />
+          </span>
+        </Link>
+        <div className="space-y-4">
+          <h2 className="text-2xl font-extrabold tracking-tight sm:text-3xl">
+            Từ một học phần đến cả hành trình học
           </h2>
-          <p className="text-sm sm:text-base text-zinc-500 dark:text-zinc-400 mt-2">
-            Đầy đủ các công cụ ôn luyện từ vựng tiếng Anh theo tiêu chuẩn CEFR A1–B1.
+          <p className="leading-relaxed text-zinc-500">
+            Thêm từ, nghĩa tiếng Việt, phiên âm IPA và câu ví dụ. Chọn cách học
+            phù hợp ngay trên trang học phần của bạn.
           </p>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          <Card hoverable className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center border border-teal-500/20">
-              <Zap className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Word Blaster Arcade
-            </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Trò chơi bắn mục tiêu 2 chế độ: Nhìn từ tiếng Anh gõ nhanh phản xạ hoặc nhìn nghĩa tiếng Việt để tự nhớ từ tiếng Anh.
-            </p>
-            <div className="pt-2">
-              <Link
-                href={`/sets/${sampleSet.id}/arcade`}
-                className="inline-flex items-center text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
-              >
-                <span>Trải nghiệm game</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
-              </Link>
-            </div>
-          </Card>
-
-          <Card hoverable className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center border border-amber-500/20">
-              <Layers className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Flashcard & Luyện tập thông minh
-            </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Lật thẻ với phiên âm IPA chuẩn, ví dụ ngữ cảnh thực tế và chế độ kiểm tra câu hỏi 4 lựa chọn không gây nhầm lẫn.
-            </p>
-            <div className="pt-2">
-              <Link
-                href={`/sets/${sampleSet.id}`}
-                className="inline-flex items-center text-xs font-semibold text-amber-600 dark:text-amber-400 hover:underline"
-              >
-                <span>Xem chi tiết học phần</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
-              </Link>
-            </div>
-          </Card>
-
-          <Card hoverable className="space-y-4">
-            <div className="w-12 h-12 rounded-2xl bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-500/20">
-              <ShieldCheck className="w-6 h-6" />
-            </div>
-            <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100">
-              Bảo mật & Quyền riêng tư
-            </h3>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 leading-relaxed">
-              Khám phá không hiển thị thông tin hay avatar người tạo thẻ. Dữ liệu cá nhân được phân quyền bảo mật tuyệt đối với RLS.
-            </p>
-            <div className="pt-2">
-              <Link
-                href="/explore"
-                className="inline-flex items-center text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline"
-              >
-                <span>Xem bộ thẻ công khai</span>
-                <ArrowRight className="w-3.5 h-3.5 ml-1" />
-              </Link>
-            </div>
-          </Card>
+          <ul className="space-y-3 text-sm">
+            {[
+              "Nhập nhanh danh sách từ từ CSV hoặc Excel",
+              "Ôn thẻ và tiếp tục tiến độ học đã lưu",
+              "Luyện nghe, nói, đọc hiểu và dịch theo ngữ cảnh",
+            ].map((text) => (
+              <li key={text} className="flex items-start gap-2">
+                <CheckCircle2 className="mt-0.5 size-4 shrink-0 text-indigo-500" />
+                {text}
+              </li>
+            ))}
+          </ul>
         </div>
       </section>
-
-      {/* Featured Vocabulary Cards Preview */}
-      <section className="py-12 border-t border-zinc-200/80 dark:border-zinc-800/80">
-        <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
-          <div>
-            <div className="flex items-center gap-2 mb-2">
-              <Target className="w-5 h-5 text-teal-500" />
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                Kho từ mẫu chuẩn hóa
-              </span>
-            </div>
-            <h2 className="text-2xl sm:text-3xl font-bold text-zinc-900 dark:text-zinc-100">
-              Từ vựng tiêu biểu trong hệ thống
-            </h2>
-          </div>
-          <Link href="/explore">
-            <Button variant="outline" size="sm">
-              Xem tất cả ({DEMO_CARDS.length} từ)
-              <ArrowRight className="w-4 h-4 ml-1.5" />
-            </Button>
-          </Link>
+      <section className="space-y-7 border-t border-zinc-200 py-12 dark:border-zinc-800">
+        <div className="text-center">
+          <h2 className="text-2xl font-extrabold sm:text-3xl">
+            Chọn cách học phù hợp với bạn
+          </h2>
+          <p className="mt-2 text-sm text-zinc-500">
+            Những chế độ quen thuộc, cùng mục tiêu ghi nhớ từ vựng lâu hơn.
+          </p>
         </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {featuredCards.map((card) => (
-            <Card key={card.id} hoverable className="flex flex-col justify-between">
-              <div>
-                <div className="flex items-center justify-between gap-2 mb-2">
-                  <span className="text-lg font-bold text-zinc-950 dark:text-zinc-50 tracking-tight">
-                    {card.term}
-                  </span>
-                  <div className="flex items-center gap-1.5">
-                    {card.cefrLevel && (
-                      <Badge variant="teal" size="sm">
-                        {card.cefrLevel}
-                      </Badge>
-                    )}
-                    <Badge variant="zinc" size="sm">
-                      {card.partOfSpeech}
-                    </Badge>
-                  </div>
-                </div>
-
-                {card.ipa && (
-                  <p className="text-xs font-mono text-zinc-400 dark:text-zinc-500 mb-2">
-                    {card.ipa}
-                  </p>
-                )}
-
-                <p className="text-sm font-medium text-zinc-700 dark:text-zinc-300 mb-3">
-                  {card.meaningVi}
-                </p>
-
-                {card.exampleEn && (
-                  <div className="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 border border-zinc-200/50 dark:border-zinc-800/60 text-xs space-y-1">
-                    <p className="text-zinc-800 dark:text-zinc-200 italic font-serif">
-                      &quot;{card.exampleEn}&quot;
-                    </p>
-                    {card.exampleVi && (
-                      <p className="text-zinc-500 dark:text-zinc-400">
-                        {card.exampleVi}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </div>
-
-              <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between text-xs text-zinc-500">
-                <span className="flex items-center gap-1 text-emerald-600 dark:text-emerald-400 font-medium">
-                  <CheckCircle2 className="w-3.5 h-3.5" /> Đã kiểm duyệt
-                </span>
-                <span>Thẻ #{card.position + 1}</span>
-              </div>
-            </Card>
+        <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+          {features.map(({ icon: Icon, title, text, color }) => (
+            <div
+              key={title}
+              className="rounded-2xl border border-zinc-200 bg-white p-6 dark:border-zinc-800 dark:bg-zinc-900"
+            >
+              <span
+                className={`mb-4 flex size-11 items-center justify-center rounded-xl ${color}`}
+              >
+                <Icon className="size-6" />
+              </span>
+              <h3 className="font-bold">{title}</h3>
+              <p className="mt-2 text-sm leading-relaxed text-zinc-500">
+                {text}
+              </p>
+            </div>
           ))}
         </div>
+      </section>
+      <section className="flex flex-col items-start justify-between gap-6 rounded-3xl border border-amber-500/25 bg-gradient-to-r from-amber-500/10 to-orange-500/5 p-6 sm:flex-row sm:items-center sm:p-8">
+        <div className="space-y-2">
+          <h2 className="flex items-center gap-2 text-2xl font-extrabold">
+            <Zap className="size-6 text-amber-500" />
+            Word Blaster
+          </h2>
+          <p className="max-w-xl text-sm leading-relaxed text-zinc-500">
+            Thêm một cách ôn từ thật vui: gõ từ tiếng Anh để bắn mục tiêu. Chọn
+            nhìn từ gõ nhanh hoặc nhìn nghĩa để tự nhớ đáp án.
+          </p>
+          <p className="text-xs text-zinc-500">
+            Bản chơi thử dùng bộ từ mẫu, tách biệt với học phần của bạn.
+          </p>
+        </div>
+        <Link
+          href={`/sets/${sample.id}/arcade`}
+          className="inline-flex shrink-0 items-center gap-2 rounded-full bg-amber-500 px-6 py-3 font-bold text-zinc-950 hover:bg-amber-400"
+        >
+          <Gamepad2 className="size-5" />
+          Chơi thử Word Blaster
+        </Link>
       </section>
     </AppShell>
   );

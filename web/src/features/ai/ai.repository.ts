@@ -89,6 +89,7 @@ export async function getOrCreateAiBatch(
   );
 
   if (reserveError) {
+    if (mode === "dialogue" && reserveError.code === "23514") return { status: "failed", code: "FEATURE_NOT_READY", error: "Hội thoại hiện chưa được bật. Bạn vẫn có thể dùng các chế độ học khác." };
     return {
       status: "failed",
       code: "RPC_ERROR",

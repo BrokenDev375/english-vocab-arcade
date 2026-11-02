@@ -331,7 +331,7 @@ function SpeakContent() {
         {/* Progress bar */}
         <div className="w-full h-1.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
           <div
-            className="h-full bg-teal-600 transition-all duration-300"
+            className="h-full bg-indigo-600 transition-all duration-300"
             style={{
               width: `${((currentIndex + (evalResult ? 1 : 0)) / cards.length) * 100}%`,
             }}
@@ -341,7 +341,7 @@ function SpeakContent() {
         {/* Speech Card */}
         <Card className="p-8 space-y-6 text-center">
           <div className="space-y-2">
-            <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
+            <span className="text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400">
               Luyện nói từ vựng
             </span>
 
@@ -367,7 +367,7 @@ function SpeakContent() {
               onClick={handlePlaySample}
               className="inline-flex items-center gap-2 text-xs"
             >
-              <Volume2 className={`w-4 h-4 text-teal-600 ${isPlayingAudio ? "animate-pulse" : ""}`} />
+              <Volume2 className={`w-4 h-4 text-indigo-600 ${isPlayingAudio ? "animate-pulse" : ""}`} />
               <span>Nghe phát âm chuẩn</span>
             </Button>
           </div>
@@ -384,7 +384,7 @@ function SpeakContent() {
                   className={`rounded-full w-20 h-20 p-0 mx-auto shadow-xl flex items-center justify-center transition-all ${
                     isRecording
                       ? "bg-rose-600 animate-bounce ring-4 ring-rose-200"
-                      : "bg-teal-600 hover:bg-teal-700"
+                      : "bg-indigo-600 hover:bg-indigo-700"
                   }`}
                   title="Nhấn để thu âm"
                 >
@@ -532,7 +532,7 @@ function SpeakContent() {
                   variant="primary"
                   size="md"
                   onClick={handleNext}
-                  className="w-full flex items-center justify-center gap-1 bg-teal-600 hover:bg-teal-700 text-white"
+                  className="w-full flex items-center justify-center gap-1 bg-indigo-600 hover:bg-indigo-700 text-white"
                 >
                   <span>Từ tiếp theo</span>
                   <ArrowRight className="w-4 h-4 ml-1" />

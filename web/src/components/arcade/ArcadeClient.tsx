@@ -290,19 +290,19 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
               onClick={() => chooseMode("typing")}
               className={`p-6 rounded-2xl border-2 transition-all cursor-pointer ${
                 selectedMode === "typing"
-                  ? "border-teal-500 bg-teal-50/50 dark:bg-teal-950/30 shadow-md"
+                  ? "border-indigo-500 bg-indigo-50/50 dark:bg-indigo-950/30 shadow-md"
                   : "border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 hover:border-zinc-300"
               }`}
             >
               <div className="flex items-center gap-3 mb-3">
-                <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+                <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                   <Zap className="w-5 h-5" />
                 </div>
                 <div>
                   <h3 className="font-bold text-zinc-900 dark:text-zinc-100">
                     Chế độ 1: Luyện gõ phản xạ
                   </h3>
-                  <span className="text-xs text-teal-600 dark:text-teal-400 font-medium">
+                  <span className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">
                     Nhìn từ tiếng Anh → Gõ nhanh
                   </span>
                 </div>
@@ -341,7 +341,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
           <div className="p-4.5 rounded-2xl bg-zinc-100 dark:bg-zinc-900/60 border border-zinc-200 dark:border-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 space-y-2">
             <div className="flex items-center gap-1.5 font-bold text-zinc-900 dark:text-zinc-200">
-              <Info className="w-4 h-4 text-teal-500" />
+              <Info className="w-4 h-4 text-indigo-500" />
               <span>Quy tắc trò chơi</span>
             </div>
             <ul className="list-disc list-inside space-y-1">
@@ -399,7 +399,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
         <div className="flex items-center gap-4 sm:gap-6">
           <div className="text-right">
             <span className="text-[10px] uppercase text-zinc-400 block">Chặng</span>
-            <span className="text-sm font-bold text-teal-400">
+            <span className="text-sm font-bold text-indigo-400">
               {gameState.stageIndex + 1} / {Math.ceil(gameState.orderedCardIds.length / 10) || 1}
             </span>
           </div>
@@ -447,8 +447,8 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
         {/* PAUSED MODAL OVERLAY */}
         {gameState.phase === "paused" && (
           <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 rounded-3xl z-20 animate-in fade-in">
-            <Card className="p-8 text-center max-w-sm w-full space-y-4 shadow-2xl border-2 border-teal-500/40">
-              <Pause className="w-10 h-10 mx-auto text-teal-500" />
+            <Card className="p-8 text-center max-w-sm w-full space-y-4 shadow-2xl border-2 border-indigo-500/40">
+              <Pause className="w-10 h-10 mx-auto text-indigo-500" />
               <h3 className="text-xl font-bold text-zinc-950 dark:text-zinc-50">Tạm dừng</h3>
               <p className="text-xs text-zinc-500">
                 Trò chơi đang dừng. Vị trí các từ vựng và thời gian bay được bảo toàn.
@@ -469,8 +469,8 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
         {/* STAGE CLEARED MODAL OVERLAY */}
         {gameState.phase === "stage_complete" && (
           <div className="absolute inset-0 bg-zinc-950/80 backdrop-blur-sm flex items-center justify-center p-4 rounded-3xl z-20 animate-in zoom-in-95">
-            <Card className="p-8 text-center max-w-md w-full space-y-5 shadow-2xl border-2 border-teal-500/60 bg-gradient-to-b from-teal-50/40 via-white to-zinc-50 dark:from-teal-950/30 dark:via-zinc-900 dark:to-zinc-900">
-              <div className="w-14 h-14 mx-auto rounded-2xl bg-teal-500/10 text-teal-500 flex items-center justify-center">
+            <Card className="p-8 text-center max-w-md w-full space-y-5 shadow-2xl border-2 border-indigo-500/60 bg-gradient-to-b from-indigo-50/40 via-white to-zinc-50 dark:from-indigo-950/30 dark:via-zinc-900 dark:to-zinc-900">
+              <div className="w-14 h-14 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-500 flex items-center justify-center">
                 <Sparkles className="w-7 h-7" />
               </div>
               <div className="space-y-1">
@@ -563,7 +563,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
                         <button
                           type="button"
                           onClick={() => handlePronounce(c.term)}
-                          className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-teal-400"
+                          className="p-1 rounded-lg hover:bg-zinc-800 text-zinc-400 hover:text-indigo-400"
                           title="Nghe phát âm"
                         >
                           <Volume2 className="w-3.5 h-3.5" />
@@ -583,7 +583,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
               {/* Persistence Notice */}
               <div className="flex items-center justify-center gap-1.5 text-[11px] text-zinc-400 bg-zinc-800/40 p-2 rounded-xl">
-                <Info className="w-3.5 h-3.5 shrink-0 text-teal-400" />
+                <Info className="w-3.5 h-3.5 shrink-0 text-indigo-400" />
                 <span>Tiến độ được lưu trên máy và đồng bộ khi bạn đăng nhập.</span>
               </div>
 
@@ -615,10 +615,10 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
       {/* Input Typing Bridge Bar */}
       <div
         className={`p-3 rounded-2xl bg-zinc-900 border-2 transition-all flex items-center gap-3 ${
-          isInputShaking ? "border-rose-500 animate-shake" : "border-zinc-800 focus-within:border-teal-500"
+          isInputShaking ? "border-rose-500 animate-shake" : "border-zinc-800 focus-within:border-indigo-500"
         }`}
       >
-        <div className="p-2 rounded-xl bg-zinc-800 text-teal-400">
+        <div className="p-2 rounded-xl bg-zinc-800 text-indigo-400">
           <Keyboard className="w-5 h-5" />
         </div>
 
@@ -651,7 +651,7 @@ export const ArcadeClient: React.FC<ArcadeClientProps> = ({ currentSet, cards })
 
         {gameState.lockedTargetId && (
           <div className="flex items-center gap-2">
-            <span className="text-xs font-mono font-bold text-teal-400 bg-teal-950/60 border border-teal-500/30 px-2.5 py-1 rounded-lg">
+            <span className="text-xs font-mono font-bold text-indigo-400 bg-indigo-950/60 border border-indigo-500/30 px-2.5 py-1 rounded-lg">
               {gameState.typedBuffer}
             </span>
             <button

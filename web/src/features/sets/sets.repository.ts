@@ -75,7 +75,7 @@ export async function listLearningSets(
     query = query.eq("topic", topic.trim());
   }
 
-  query = query.order("created_at", { ascending: false }).range(from, to);
+  query = query.order("created_at", { ascending: false }).order("id", { ascending: false }).range(from, to);
 
   const { data, count, error } = await query;
   if (error) {

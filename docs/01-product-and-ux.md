@@ -104,7 +104,7 @@ Lịch đơn giản, có thể kiểm tra:
 
 ## 6. Thiết kế giao diện
 
-Phong cách riêng: nền sáng hoặc tối dễ đọc, màu xanh navy/teal, điểm nhấn amber cho hành động trong game. Dùng icon và vector do dự án tạo; có chế độ giảm chuyển động.
+Theo yêu cầu chủ dự án ngày 02/11/2026, giữ bố cục và luồng học quen thuộc của Quizlet clone gốc: tông indigo/blue, thanh tìm kiếm và nút tạo học phần trên header, thư viện cá nhân, lưới chế độ học và thẻ lật ngay trong trang học phần. Nội dung chuyển sang tiếng Anh A1–B1, phiên âm IPA; Word Blaster là chế độ bổ sung, dùng điểm nhấn amber. Backend, phân quyền, cache AI và queue lưu tiến độ tiếng Anh tiếp tục được dùng. Có chế độ giảm chuyển động.
 
 Các yêu cầu:
 - Layout dùng được ở 360 px, 768 px và 1440 px.

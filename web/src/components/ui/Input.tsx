@@ -29,7 +29,7 @@ export const Input = React.forwardRef<HTMLInputElement, InputProps>(
           className={`w-full rounded-xl border px-3.5 py-2.5 text-sm transition-colors duration-150 focus-visible:outline-none focus-visible:ring-2 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 dark:placeholder:text-zinc-500 ${
             error
               ? "border-rose-500 focus-visible:ring-rose-500/30"
-              : "border-zinc-300 dark:border-zinc-700 focus-visible:border-teal-500 focus-visible:ring-teal-500/20"
+              : "border-zinc-300 dark:border-zinc-700 focus-visible:border-indigo-500 focus-visible:ring-indigo-500/20"
           } ${className}`}
           {...props}
         />

@@ -7,6 +7,7 @@ import {
   GrammarOutputSchema,
   ReadingOutputSchema,
   TranslationOutputSchema,
+  DialogueOutputSchema,
 } from "./schemas";
 
 export interface TargetCardInfo {
@@ -200,6 +201,22 @@ ${JSON.stringify(cardsData, null, 2)}`;
       },
       required: ["title", "level", "passageEn", "translationVi", "usedCardIds", "questions"],
     };
+  } else if (mode === "dialogue") {
+    prompt = `Create one coherent, natural English dialogue for two speakers A and B at CEFR ${targetLevel}.
+Write 4 to 12 short turns, alternating A/B and starting with A. Give a Vietnamese situation and translation for every turn.
+Every turn must be linked to a supplied cardId and naturally use that vocabulary word. Repeated card IDs across turns are allowed.
+Use every supplied card at least once. usedCardIds must contain exactly the supplied IDs without duplicates.
+Cards data:
+${JSON.stringify(cardsData, null, 2)}`;
+    jsonSchema = {
+      type: "object", properties: {
+        title: { type: "string" }, situationVi: { type: "string" }, level: { type: "string", enum: ["A1", "A2", "B1"] },
+        usedCardIds: { type: "array", items: { type: "string" }, minItems: 1, maxItems: 6 },
+        turns: { type: "array", minItems: 4, maxItems: 12, items: { type: "object", properties: {
+          role: { type: "string", enum: ["A", "B"] }, cardId: { type: "string" }, textEn: { type: "string" }, textVi: { type: "string" },
+        }, required: ["role", "cardId", "textEn", "textVi"] } },
+      }, required: ["title", "situationVi", "level", "usedCardIds", "turns"],
+    };
   } else {
     // Translation
     prompt = `Create a Vietnamese to English translation exercise for each vocabulary card below.
@@ -306,6 +323,17 @@ function validateModeOutput(mode: AiMode, json: unknown, expectedCardIds: string
         throw new Error(`Reading question ${q.id} has duplicate options`);
       }
     }
+    return parsed;
+  } else if (mode === "dialogue") {
+    const parsed = DialogueOutputSchema.parse(json);
+    const used = new Set(parsed.usedCardIds);
+    if (used.size !== parsed.usedCardIds.length || used.size !== expectedSet.size || [...used].some(id => !expectedSet.has(id))) throw new Error("Dialogue output has invalid or incomplete card IDs");
+    const covered = new Set<string>();
+    for (const turn of parsed.turns) {
+      if (!expectedSet.has(turn.cardId)) throw new Error("Dialogue output contains unexpected cardId");
+      covered.add(turn.cardId);
+    }
+    if (covered.size !== expectedSet.size) throw new Error("Dialogue output is incomplete");
     return parsed;
   } else {
     const parsed = TranslationOutputSchema.parse(json);

@@ -125,7 +125,7 @@ function FlashcardContent() {
           </Link>
 
           <div className="flex items-center gap-2">
-            <Layers className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <Layers className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
               Lật Flashcard: {setTitle}
             </span>

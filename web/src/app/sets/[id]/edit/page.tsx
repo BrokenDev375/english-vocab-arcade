@@ -248,7 +248,7 @@ function EditSetContent() {
               size="md"
               onClick={() => setShowImportModal(true)}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-teal-600 dark:text-teal-400" />
+              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
               Nhập CSV / Excel
             </Button>
 
@@ -277,7 +277,7 @@ function EditSetContent() {
           <Card className="space-y-4">
             <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800 font-bold text-sm text-zinc-900 dark:text-zinc-100">
               <span className="flex items-center gap-2">
-                <BookOpen className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+                <BookOpen className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
                 <span>Cài đặt thông tin chung (Revision: {contentRevision})</span>
               </span>
               <Button type="submit" variant="primary" size="sm" isLoading={saving}>
@@ -336,7 +336,7 @@ function EditSetContent() {
                   type="checkbox"
                   checked={isPublic}
                   onChange={(e) => setIsPublic(e.target.checked)}
-                  className="w-5 h-5 rounded border-zinc-300 text-teal-600 focus:ring-teal-500 cursor-pointer"
+                  className="w-5 h-5 rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                 />
                 <label htmlFor="edit-public" className="text-sm font-medium text-zinc-800 dark:text-zinc-200 cursor-pointer">
                   Công khai học phần trên trang Khám phá
@@ -358,7 +358,7 @@ function EditSetContent() {
               size="sm"
               onClick={() => setShowImportModal(true)}
             >
-              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-teal-600 dark:text-teal-400" />
+              <FileSpreadsheet className="w-4 h-4 mr-1.5 text-indigo-600 dark:text-indigo-400" />
               Nhập từ tệp
             </Button>
           </div>
@@ -447,7 +447,7 @@ function EditSetContent() {
         {/* Add New Card Form */}
         <Card className="p-5 border-dashed border-2 border-zinc-300 dark:border-zinc-700 space-y-4">
           <h3 className="font-bold text-sm text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-            <Plus className="w-4 h-4 text-teal-600 dark:text-teal-400" />
+            <Plus className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
             <span>Thêm thẻ mới vào học phần</span>
           </h3>
 

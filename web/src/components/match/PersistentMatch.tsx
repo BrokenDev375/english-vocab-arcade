@@ -39,7 +39,7 @@ export function PersistentMatch({ setId, setTitle, cards }: { setId: string; set
       <h1 className="text-xl font-bold">Ghép thẻ: {setTitle}</h1><p>Chặng {Math.min(stageIndex + 1, plan.stages.length)}/{plan.stages.length} · {plan.totalPairs} từ · {mistakes} lần ghép sai</p>
       {finished ? <><p>Đã hoàn thành tất cả các chặng!</p><Button onClick={() => { void sync.restart(() => { setPlan(createMatchPlan(cards)); setStageIndex(0); setMatched([]); setMistakes(0); setPaused(false); }); }}>Chơi lại</Button></> : <>
         <Button variant="outline" onClick={() => setPaused(v => !v)}>{paused ? "Tiếp tục" : "Tạm dừng"}</Button>
-        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{stage.tiles.map(tile => <button key={tile.id} disabled={paused || matched.includes(tile.id)} onClick={() => choose(tile)} className={`min-h-24 rounded-xl border p-4 disabled:opacity-30 ${selected === tile.id ? "border-teal-500 bg-teal-500/10" : "border-zinc-400"}`}>{tile.text}</button>)}</div>
+        <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">{stage.tiles.map(tile => <button key={tile.id} disabled={paused || matched.includes(tile.id)} onClick={() => choose(tile)} className={`min-h-24 rounded-xl border p-4 disabled:opacity-30 ${selected === tile.id ? "border-indigo-500 bg-indigo-500/10" : "border-zinc-400"}`}>{tile.text}</button>)}</div>
         <p role="status">{message}</p>
         {stage.tiles.every(t => matched.includes(t.id)) && <Button onClick={() => { setStageIndex(v => v + 1); setSelected(null); setMatched([]); setMessage(""); }}>{stageIndex + 1 === plan.stages.length ? "Hoàn thành" : "Chặng tiếp theo"}</Button>}
       </>}

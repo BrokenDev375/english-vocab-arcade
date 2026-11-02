@@ -10,10 +10,10 @@ export interface AppShellProps {
 
 export const AppShell: React.FC<AppShellProps> = ({
   children,
-  showDemoBanner = true,
+  showDemoBanner = false,
 }) => {
   return (
-    <div className="min-h-screen flex flex-col bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 selection:bg-teal-500 selection:text-white transition-colors">
+    <div className="min-h-screen flex flex-col bg-zinc-50/60 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 selection:bg-indigo-500 selection:text-white transition-colors">
       {showDemoBanner && <DemoBanner />}
       <Suspense
         fallback={
@@ -22,7 +22,7 @@ export const AppShell: React.FC<AppShellProps> = ({
       >
         <Navbar />
       </Suspense>
-      <main className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 md:py-12">
+      <main id="main-content" className="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         {children}
       </main>
       <Footer />

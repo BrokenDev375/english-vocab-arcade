@@ -1,294 +1,212 @@
 "use client";
-
-import React, { useEffect, useState } from "react";
+import { useEffect, useState } from "react";
 import Link from "next/link";
-import { AppShell } from "@/components/layout/AppShell";
-import { Card } from "@/components/ui/Card";
-import { Badge } from "@/components/ui/Badge";
-import { Button } from "@/components/ui/Button";
-
-import type { UserStatsSummary } from "@/features/stats/stats.types";
 import {
-  LayoutDashboard,
-  Flame,
+  ArrowRight,
   BookOpen,
   Clock,
+  Flame,
+  Layers,
   Plus,
-  Gamepad2,
-  Calendar,
-  CheckCircle2,
-  PlayCircle,
+  Zap,
 } from "lucide-react";
+import { AppShell } from "@/components/layout/AppShell";
+import { SetCollection } from "@/components/sets/SetCollection";
+import { useStudyIdentity } from "@/components/auth/AuthProvider";
+import { STUDY_MODE_LABELS, studyModeHref } from "@/features/study/modes";
+import type { UserStatsSummary } from "@/features/stats/stats.types";
 
 export default function DashboardPage() {
-  const [sets, setSets] = useState<Array<{ id: string; title: string; cefrLevel: string; cardCount: number }>>([]);
-  const [loadError, setLoadError] = useState<string | null>(null);
+  const identity = useStudyIdentity();
   const [stats, setStats] = useState<UserStatsSummary | null>(null);
-  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
-
+  const [error, setError] = useState<string | null>(null);
+  const [tab, setTab] = useState<"mine" | "recent">("mine");
   useEffect(() => {
-    let isMounted = true;
-
-    async function loadStats() {
-      try {
-        const res = await fetch("/api/stats");
-        if (res.ok) {
-          const json = await res.json();
-          if (isMounted && json.data) {
-            setStats(json.data);
-            setIsAuthenticated(true);
-            const setResponse = await fetch("/api/sets?scope=user&pageSize=50");
-            if (!setResponse.ok) throw new Error("Không tải được học phần của bạn.");
-            const setJson = await setResponse.json();
-            if (isMounted) setSets(setJson.data.map((row: { id: string; title: string; cefr_level: string; card_count: number }) => ({ id: row.id, title: row.title, cefrLevel: row.cefr_level, cardCount: row.card_count })));
-          }
-        } else {
-          // Guest or unauthenticated
-          if (isMounted) {
-            setIsAuthenticated(false);
-          }
-        }
-      } catch {
-        if (isMounted) setLoadError("Chưa tải được dữ liệu. Hãy thử tải lại trang.");
-      } finally {
-        if (isMounted) setIsLoading(false);
-      }
-    }
-
-    loadStats();
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  // Format active minutes
-  const activeMinutes = stats
-    ? Math.round(stats.totalActiveSeconds / 60)
-    : 0;
-
+    if (identity.userId === "guest") return;
+    const controller = new AbortController();
+    void fetch("/api/stats", { signal: controller.signal })
+      .then(async (response) => {
+        if (!response.ok)
+          throw new Error("Không tải được tiến độ học. Hãy tải lại trang.");
+        const json = await response.json();
+        if (!controller.signal.aborted) setStats(json.data);
+      })
+      .catch((reason) => {
+        if (!controller.signal.aborted)
+          setError(
+            reason instanceof Error
+              ? reason.message
+              : "Không tải được tiến độ.",
+          );
+      });
+    return () => controller.abort();
+  }, [identity.userId]);
+  const recent = (stats?.recentSessions || []).filter(
+    (session, index, all) =>
+      session.setId &&
+      all.findIndex((item) => item.setId === session.setId) === index,
+  );
   return (
     <AppShell>
-      <div className="space-y-8">
-        {loadError && <p role="alert">{loadError} <button onClick={() => window.location.reload()}>Thử lại</button></p>}
-        {/* Header */}
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+      <div className="space-y-7">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <div>
-            <div className="flex items-center gap-2 mb-2">
-              <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                <LayoutDashboard className="w-5 h-5" />
-              </div>
-              <span className="text-xs font-bold uppercase tracking-wider text-teal-600 dark:text-teal-400">
-                Không gian học tập cá nhân
-              </span>
-            </div>
-            <h1 className="text-3xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">
-              Bảng điều khiển
+            <h1 className="text-3xl font-black tracking-tight">
+              Thư viện của tôi
             </h1>
-            <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-1">
-              Theo dõi tiến độ tích lũy từ vựng, duy trì chuỗi học và các phiên chơi Word Blaster.
+            <p className="mt-2 text-sm text-zinc-500">
+              Học phần, tiến độ và những từ bạn muốn ghi nhớ.
             </p>
           </div>
-
-          <div className="flex items-center gap-2.5">
-            <Link href="/sets/new">
-              <Button variant="primary" size="md">
-                <Plus className="w-4 h-4 mr-1.5" />
-                Tạo bộ thẻ mới
-              </Button>
-            </Link>
-          </div>
+          <Link
+            href="/sets/new"
+            className="inline-flex items-center justify-center gap-2 rounded-full bg-gradient-to-r from-indigo-600 to-blue-600 px-5 py-2.5 text-sm font-bold text-white shadow-sm"
+          >
+            <Plus className="size-4" />
+            Tạo học phần mới
+          </Link>
         </div>
-
-        {/* Guest Banner if not logged in */}
-        {!isLoading && !isAuthenticated && (
-          <div className="p-4 rounded-xl border border-amber-500/30 bg-amber-50/50 dark:bg-amber-950/20 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <p className="text-sm font-semibold text-amber-900 dark:text-amber-200">
-                Đăng nhập để xem tiến độ của bạn
-              </p>
-              <p className="text-xs text-amber-700 dark:text-amber-400">
-                Đăng nhập hoặc đăng ký tài khoản để lưu trữ chuỗi học tập, độ chính xác và lịch sử phiên học của riêng bạn.
-              </p>
-            </div>
-            <div className="flex items-center gap-2">
-              <Link href="/login">
-                <Button variant="outline" size="sm">Đăng nhập</Button>
-              </Link>
-              <Link href="/signup">
-                <Button variant="primary" size="sm">Đăng ký ngay</Button>
-              </Link>
-            </div>
-          </div>
-        )}
-
-        {/* Stats Summary Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-          <Card className="space-y-1">
-            <div className="flex items-center justify-between text-zinc-500 text-xs font-medium">
-              <span>Chuỗi học tập</span>
-              <Flame className="w-4 h-4 text-orange-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-zinc-50">
-              {stats ? stats.streakDays : 0}{" "}
-              <span className="text-sm font-normal text-zinc-400">ngày</span>
-            </p>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">
-              {stats && stats.streakDays > 0 ? "Đang duy trì chuỗi" : "Bắt đầu bài học hôm nay"}
-            </p>
-          </Card>
-
-          <Card className="space-y-1">
-            <div className="flex items-center justify-between text-zinc-500 text-xs font-medium">
-              <span>Từ vựng đã thuộc</span>
-              <BookOpen className="w-4 h-4 text-teal-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-zinc-50">
-              {stats ? stats.totalMasteredWords : 0}{" "}
-              <span className="text-sm font-normal text-zinc-400">từ</span>
-            </p>
-            <p className="text-[11px] text-zinc-500">
-              {stats ? `${stats.totalLearningWords} từ đang học` : "Chưa có dữ liệu"}
-            </p>
-          </Card>
-
-          <Card className="space-y-1">
-            <div className="flex items-center justify-between text-zinc-500 text-xs font-medium">
-              <span>Kỷ lục Word Blaster</span>
-              <Gamepad2 className="w-4 h-4 text-amber-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-amber-500">
-              {stats && stats.bestArcadeScore > 0 ? stats.bestArcadeScore.toLocaleString() : "0"}{" "}
-              <span className="text-sm font-normal text-zinc-400">điểm</span>
-            </p>
-            <p className="text-[11px] text-zinc-500">
-              {stats ? `Độ chính xác ${stats.accuracyRate}%` : "Chưa có thống kê"}
-            </p>
-          </Card>
-
-          <Card className="space-y-1">
-            <div className="flex items-center justify-between text-zinc-500 text-xs font-medium">
-              <span>Thời lượng học tập</span>
-              <Clock className="w-4 h-4 text-blue-500" />
-            </div>
-            <p className="text-2xl sm:text-3xl font-black text-zinc-950 dark:text-zinc-50">
-              {activeMinutes}{" "}
-              <span className="text-sm font-normal text-zinc-400">phút</span>
-            </p>
-            <p className="text-[11px] text-zinc-500">Loại trừ thời gian pause</p>
-          </Card>
-        </div>
-
-        {/* In Progress Study Sets */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              Bộ từ vựng đang học
+        {identity.userId === "guest" ? (
+          <div className="space-y-4 rounded-2xl border border-indigo-200 bg-indigo-50/50 p-8 text-center dark:border-indigo-900 dark:bg-indigo-950/30">
+            <BookOpen className="mx-auto size-10 text-indigo-500" />
+            <h2 className="text-xl font-bold">
+              Đăng nhập để mở thư viện của bạn
             </h2>
+            <p className="text-sm text-zinc-500">
+              Lưu bộ thẻ và tiếp tục học trên các thiết bị của bạn.
+            </p>
             <Link
-              href="/explore"
-              className="text-xs font-semibold text-teal-600 dark:text-teal-400 hover:underline"
+              href="/login?next=%2Fdashboard"
+              className="inline-block rounded-xl bg-indigo-600 px-5 py-2.5 text-sm font-bold text-white"
             >
-              Thêm bộ khác
+              Đăng nhập
             </Link>
           </div>
-
-          {!sets.length && <p>Chưa có học phần của bạn. Hãy tạo bộ thẻ hoặc khám phá học phần công khai.</p>}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {sets.map((set) => (
-              <Card key={set.id} className="space-y-4">
-                <div className="flex items-start justify-between gap-3">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1.5">
-                      <Badge variant="teal" size="sm">
-                        {set.cefrLevel}
-                      </Badge>
-                      <span className="text-xs text-zinc-500 font-medium">
-                        {set.cardCount} thẻ
-                      </span>
-                    </div>
-                    <h3 className="text-base font-bold text-zinc-950 dark:text-zinc-50">
-                      {set.title}
-                    </h3>
-                  </div>
-
-                  <Link href={`/sets/${set.id}/arcade`}>
-                    <Button variant="amber" size="sm">
-                      <Gamepad2 className="w-4 h-4 mr-1" />
-                      Chơi
-                    </Button>
-                  </Link>
-                </div>
-
-                <div className="flex items-center gap-2 pt-1">
-                  <Link href={`/sets/${set.id}`} className="flex-1">
-                    <Button variant="outline" size="sm" className="w-full">
-                      <BookOpen className="w-4 h-4 mr-1" />
-                      Luyện tập
-                    </Button>
-                  </Link>
-                  <Link href={`/sets/${set.id}/match`} className="flex-1">
-                    <Button variant="ghost" size="sm" className="w-full">
-                      Ghép cặp
-                    </Button>
-                  </Link>
-                </div>
-              </Card>
-            ))}
-          </div>
-        </div>
-
-        {/* Recent Study Sessions History (if user has sessions) */}
-        {stats && stats.recentSessions && stats.recentSessions.length > 0 && (
-          <div className="space-y-4">
-            <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">
-              Lịch sử phiên học gần đây
-            </h2>
-            <div className="space-y-2">
-              {stats.recentSessions.map((session) => (
-                <div
-                  key={session.id}
-                  className="p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 flex items-center justify-between gap-4"
+        ) : (
+          <>
+            {error && (
+              <p
+                role="alert"
+                className="rounded-xl border border-rose-200 p-4 text-sm text-rose-600"
+              >
+                {error}
+                <button
+                  className="ml-2 underline"
+                  onClick={() => window.location.reload()}
                 >
-                  <div className="flex items-center gap-3">
-                    <div className="p-2 rounded-lg bg-teal-500/10 text-teal-600 dark:text-teal-400">
-                      {session.status === "completed" ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      ) : (
-                        <PlayCircle className="w-4 h-4 text-teal-500" />
-                      )}
-                    </div>
-                    <div>
-                      <p className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                        {session.setTitle}
-                      </p>
-                      <div className="flex items-center gap-2 text-xs text-zinc-500 mt-0.5">
-                        <span className="capitalize">{session.mode}</span>
-                        <span>•</span>
-                        <span className="flex items-center gap-1">
-                          <Clock className="w-3 h-3" />
-                          {Math.round(session.activeElapsedMs / 1000)}s hoạt động
-                        </span>
-                      </div>
-                    </div>
+                  Thử lại
+                </button>
+              </p>
+            )}
+            <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
+              {[
+                {
+                  label: "Chuỗi học tập",
+                  value: stats ? `${stats.streakDays} ngày` : "—",
+                  icon: Flame,
+                  color: "text-orange-500",
+                },
+                {
+                  label: "Từ vựng đã thuộc",
+                  value: stats ? `${stats.totalMasteredWords} từ` : "—",
+                  icon: Layers,
+                  color: "text-indigo-500",
+                },
+                {
+                  label: "Thời gian học",
+                  value: stats
+                    ? `${Math.round(stats.totalActiveSeconds / 60)} phút`
+                    : "—",
+                  icon: Clock,
+                  color: "text-blue-500",
+                },
+                {
+                  label: "Kỷ lục Word Blaster",
+                  value: stats
+                    ? `${stats.bestArcadeScore.toLocaleString()} điểm`
+                    : "—",
+                  icon: Zap,
+                  color: "text-amber-500",
+                },
+              ].map(({ label, value, icon: Icon, color }) => (
+                <div
+                  key={label}
+                  className="rounded-2xl border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900"
+                >
+                  <div className="flex items-center justify-between gap-2 text-xs text-zinc-500">
+                    <span>{label}</span>
+                    <Icon className={`size-4 shrink-0 ${color}`} />
                   </div>
-
-                  <div className="text-right">
-                    <Badge
-                      variant={session.status === "completed" ? "teal" : "zinc"}
-                      size="sm"
-                    >
-                      {session.status === "completed" ? "Hoàn thành" : "Đang học"}
-                    </Badge>
-                    <p className="text-[11px] text-zinc-400 mt-1 flex items-center justify-end gap-1">
-                      <Calendar className="w-3 h-3" />
-                      {new Date(session.updatedAt).toLocaleDateString("vi-VN")}
-                    </p>
-                  </div>
+                  <p className="mt-3 text-xl font-black sm:text-2xl">{value}</p>
                 </div>
               ))}
             </div>
-          </div>
+            <div
+              role="tablist"
+              aria-label="Thư viện học phần"
+              className="flex gap-6 border-b border-zinc-200 dark:border-zinc-800"
+            >
+              {[
+                { id: "mine", label: "Học phần của tôi" },
+                { id: "recent", label: "Đã học gần đây" },
+              ].map((item) => (
+                <button
+                  key={item.id}
+                  role="tab"
+                  id={`tab-${item.id}`}
+                  aria-selected={tab === item.id}
+                  aria-controls="library-panel"
+                  onClick={() => setTab(item.id as typeof tab)}
+                  className={`border-b-2 py-3 text-sm font-bold ${tab === item.id ? "border-indigo-600 text-indigo-600 dark:text-indigo-300" : "border-transparent text-zinc-500 hover:text-zinc-900 dark:hover:text-white"}`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+            <section
+              id="library-panel"
+              role="tabpanel"
+              aria-labelledby={`tab-${tab}`}
+            >
+              {tab === "mine" ? (
+                <SetCollection scope="user" />
+              ) : (
+                <div className="space-y-3">
+                  {!stats ? (
+                    <p role="status" className="p-6 text-sm text-zinc-500">
+                      Đang tải các phiên học...
+                    </p>
+                  ) : !recent.length ? (
+                    <p className="rounded-2xl border border-dashed border-zinc-300 p-8 text-center text-sm text-zinc-500">
+                      Bạn chưa có phiên học gần đây. Hãy mở một học phần để bắt
+                      đầu.
+                    </p>
+                  ) : (
+                    recent.map((session) => (
+                      <Link
+                        key={session.id}
+                        href={studyModeHref(session.setId, session.mode)}
+                        className="flex items-center justify-between gap-4 rounded-xl border border-zinc-200 bg-white p-5 transition hover:border-indigo-300 dark:border-zinc-800 dark:bg-zinc-900"
+                      >
+                        <div className="min-w-0">
+                          <p className="break-words font-bold">
+                            {session.setTitle}
+                          </p>
+                          <p className="mt-1 text-xs text-zinc-500">
+                            {STUDY_MODE_LABELS[session.mode] || "Học"} ·{" "}
+                            {session.status === "completed"
+                              ? "Đã hoàn thành"
+                              : "Tiếp tục học"}
+                          </p>
+                        </div>
+                        <ArrowRight className="size-4 shrink-0 text-indigo-500" />
+                      </Link>
+                    ))
+                  )}
+                </div>
+              )}
+            </section>
+          </>
         )}
       </div>
     </AppShell>

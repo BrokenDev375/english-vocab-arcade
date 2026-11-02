@@ -2,9 +2,11 @@
 
 Web tiếng Việt để học tiếng Anh A1–B1: bộ thẻ, Learn/Test, Match theo chặng, Word Blaster, nghe chính tả, luyện nói và bài tập AI theo ngữ cảnh. Mã ứng dụng nằm trong `web/`.
 
+Ngày 02/11/2026, giao diện được đưa về bố cục quen thuộc của dự án Quizlet clone gốc: header có tìm kiếm/tạo học phần, thư viện cá nhân, các chế độ học và thẻ lật ngay trong trang học phần. Bổ sung Hội thoại tiếng Anh A/B, tiếp tục dùng cache/quota AI, chấm theo câu tham khảo và queue lưu tiến độ hiện có. Xem [phạm vi và nghiệm thu](reports/quizlet-parity-20261102.md).
+
 Sau lần sửa 27/10/2026: lint, TypeScript, 114 unit tests, 46 integration tests và production build local đã PASS. Kết quả browser, phạm vi và phần chưa xác minh: [báo cáo bản sửa](reports/fix-verification-20261027.md).
 
-Sau push `1f1357d`, GitHub Actions và Vercel deployment thành công; [website](https://english-vocab-arcade.vercel.app) trả health 200 đúng commit. API học phần vẫn lỗi schema trên Supabase production, nên website chưa hoàn tất. Có thể cài database trực tiếp qua [SQL Editor](supabase/manual/README.md), không cần CLI login. Chưa xác minh gọi Gemini thật. Tập 32 thẻ hiện tại là dữ liệu thử nội bộ; public beta cần >=300 thẻ và duyệt ngôn ngữ độc lập. Metadata `reviewed` và hash không chứng minh đã được chuyên gia duyệt.
+Sau push `053982f`, [website](https://english-vocab-arcade.vercel.app) trả health 200 đúng commit. Chủ dự án đã chạy bộ SQL sáu migrations; ngày 30/10/2026 API học phần trả 200, hết lỗi thiếu bảng. Bản bổ sung Hội thoại cần chạy lại [bộ SQL Editor cập nhật](supabase/manual/README.md) để áp dụng migration 0007. Chưa xác minh gọi Gemini thật. Tập 32 thẻ hiện tại là dữ liệu thử nội bộ; public beta cần >=300 thẻ và duyệt ngôn ngữ độc lập. Metadata `reviewed` và hash không chứng minh đã được chuyên gia duyệt.
 
 ## Chạy local
 
@@ -19,7 +21,7 @@ npx supabase --workdir .. migration up --local
 
 Tạo `web/.env.local` từ [mẫu cấu hình](web/.env.example) nếu chưa tồn tại. Điền URL, publishable key và server secret của đúng Supabase local/project tiếng Anh. Không lấy env từ dự án tiếng Trung. Sau đó chạy `npm run dev`.
 
-Migrations 0001–0006 đã áp dụng local; các migration cũ được giữ nguyên. Bản 0006 cấp quyền Data API rõ ràng, backfill profiles và chặn anonymous gọi RPC lưu phiên. Chưa áp dụng production. [Bộ SQL Dashboard](supabase/manual/english-vocab-arcade.sql) được sinh từ toàn bộ migrations và có hướng dẫn chạy trong thư mục đó.
+Migrations cũ giữ nguyên. Bản 0006 cấp quyền Data API rõ ràng, backfill profiles và chặn anonymous gọi RPC lưu phiên; 0007 cho phép mode Hội thoại trong sessions và AI cache. [Bộ SQL Dashboard](supabase/manual/english-vocab-arcade.sql) gồm bảy migrations, có thể chạy lại trên database đã có đúng lịch sử sáu migrations để chỉ bổ sung 0007. Không reset database.
 
 ## Kiểm tra
 

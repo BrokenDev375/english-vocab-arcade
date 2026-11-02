@@ -1,11 +1,12 @@
 "use client";
 import { useEffect, useState } from "react";
-import Link from "next/link";
 import { useParams } from "next/navigation";
 import { AppShell } from "@/components/layout/AppShell";
 import { QuestionCard } from "./QuestionCard";
 import { StudyResults } from "./StudyResults";
 import { SyncNotice } from "./SyncNotice";
+import { StudyHeader } from "./StudyHeader";
+import { CheckCircle2, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { LoadingState } from "@/components/ui/LoadingState";
 import { ErrorAlert } from "@/components/ui/ErrorAlert";
@@ -67,13 +68,13 @@ export function VocabularyPractice({ mode }: { mode: "learn" | "test" }) {
     persistence.record({ clientEventId: persistence.newEventId(), cardId: current.cardId, mode, questionType: current.type, userAnswer: text, isCorrect: correct, durationMs, answeredAt: new Date().toISOString() }, current.id);
   };
   const reviewErrors = () => { void persistence.restart(() => { setQuestions(generateErrorReviewPlan(failedCards, pool).mainQuestions); setAnswers({}); setCurrentIndex(0); setCorrectCount(0); setStage("error_review"); }); };
-  return <AppShell>
+  return <AppShell showDemoBanner={isDemoSetId(id)}>
     <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
-    {error ? <><ErrorAlert message={error} /><Button onClick={() => window.location.reload()}>Thử lại</Button></> : loading || !persistence.ready ? <LoadingState message="Đang mở phiên học..." /> : <div className="space-y-5">
-      <Link href={`/sets/${id}`}>← Quay lại học phần</Link><h1 className="text-xl font-bold">{mode === "learn" ? "Học thích ứng" : "Kiểm tra"}: {title}</h1>
-      {stage === "error_review" && <p>Ôn lại các từ trả lời sai</p>}
+    {error ? <><ErrorAlert message={error} /><Button onClick={() => window.location.reload()}>Thử lại</Button></> : loading || !persistence.ready ? <LoadingState message="Đang mở phiên học..." /> : <div className="mx-auto max-w-3xl space-y-6">
+      <StudyHeader setId={id} title={mode === "learn" ? "Chế độ Học" : "Kiểm tra"} subtitle={title} current={stage === "results" ? questions.length : currentIndex + 1} total={questions.length} />
+      <div className="flex flex-wrap items-center justify-between gap-3 text-xs font-semibold"><span className="rounded-full bg-indigo-500/10 px-3 py-1.5 text-indigo-600 dark:text-indigo-300">{stage === "error_review" ? "Ôn lại các từ trả lời sai" : mode === "learn" ? "Luyện từ vựng và ôn lỗi" : "Kiểm tra vốn từ của bạn"}</span><span className="text-zinc-500">Đúng {correctCount} / {Object.keys(answers).length} câu đã trả lời</span></div>
       {stage === "results" ? <StudyResults setId={id} totalQuestions={questions.length} correctCount={correctCount} failedCards={failedCards} modeName={mode === "learn" ? "Học thích ứng" : "Kiểm tra"} onRestart={() => { void persistence.restart(() => reset(pool)); }} onStartErrorReview={failedCards.length ? reviewErrors : undefined} /> : current && <>
-        {answer ? <div className="mx-auto max-w-2xl rounded-xl border p-6 space-y-3"><p>Câu {currentIndex + 1}/{questions.length}: {current.prompt}</p><p>Bạn trả lời: {answer.text}</p><p>{answer.correct ? "Chính xác" : `Đáp án: ${current.correctAnswer}`}</p></div> : <QuestionCard key={current.id} question={current} questionNumber={currentIndex + 1} totalQuestions={questions.length} onAnswer={onAnswer} />}
+        {answer ? <div className="mx-auto max-w-2xl rounded-2xl border border-zinc-200 bg-white p-6 shadow-sm space-y-5 dark:border-zinc-800 dark:bg-zinc-900"><p className="text-xs font-bold text-zinc-400">Câu {currentIndex + 1}/{questions.length}</p><h2 className="text-center text-2xl font-extrabold">{current.prompt}</h2><p className="text-center text-sm text-zinc-500">Bạn trả lời: {answer.text}</p><div role="status" className={`flex items-start gap-3 rounded-xl p-4 ${answer.correct ? "bg-emerald-500/10 text-emerald-700 dark:text-emerald-300" : "bg-rose-500/10 text-rose-700 dark:text-rose-300"}`}>{answer.correct ? <CheckCircle2 className="size-5 shrink-0" /> : <XCircle className="size-5 shrink-0" />}<div><p className="font-bold">{answer.correct ? "Chính xác" : `Đáp án: ${current.correctAnswer}`}</p>{current.explanation && <p className="mt-2 text-sm text-zinc-500">{current.explanation}</p>}</div></div></div> : <QuestionCard key={current.id} question={current} questionNumber={currentIndex + 1} totalQuestions={questions.length} onAnswer={onAnswer} />}
         <div className="flex justify-end"><Button disabled={!answer} onClick={() => currentIndex + 1 < questions.length ? setCurrentIndex(v => v + 1) : setStage("results")}>{currentIndex + 1 < questions.length ? "Câu tiếp theo" : "Xem kết quả"}</Button></div>
       </>}
     </div>}

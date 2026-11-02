@@ -76,9 +76,28 @@ export const TranslationOutputSchema = z.object({
 });
 export type TranslationOutput = z.infer<typeof TranslationOutputSchema>;
 
-export type AiMode = "context" | "grammar" | "reading" | "translation";
+export const DialogueOutputSchema = z.object({
+  title: z.string().min(2).max(120),
+  situationVi: z.string().min(5).max(400),
+  level: z.enum(["A1", "A2", "B1"]),
+  usedCardIds: z.array(z.string().uuid()).min(1).max(6),
+  turns: z.array(z.object({
+    role: z.enum(["A", "B"]),
+    cardId: z.string().uuid(),
+    textEn: z.string().min(3).max(300),
+    textVi: z.string().min(3).max(300),
+  })).min(4).max(12),
+}).superRefine((dialogue, ctx) => {
+  dialogue.turns.forEach((turn, index) => {
+    if (turn.role !== (index % 2 === 0 ? "A" : "B")) ctx.addIssue({ code: "custom", path: ["turns", index, "role"], message: "Dialogue roles must alternate A/B, starting with A" });
+  });
+});
+export type DialogueOutput = z.infer<typeof DialogueOutputSchema>;
+
+export type AiMode = "context" | "grammar" | "reading" | "translation" | "dialogue";
 export type AiBatchOutput =
   | { mode: "context"; data: ContextOutput }
   | { mode: "grammar"; data: GrammarOutput }
   | { mode: "reading"; data: ReadingOutput }
-  | { mode: "translation"; data: TranslationOutput };
+  | { mode: "translation"; data: TranslationOutput }
+  | { mode: "dialogue"; data: DialogueOutput };

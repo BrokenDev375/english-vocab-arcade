@@ -194,7 +194,7 @@ export function ImportModal({
         {/* Header */}
         <div className="flex items-center justify-between pb-4 border-b border-zinc-100 dark:border-zinc-800">
           <div className="flex items-center gap-2">
-            <div className="p-2 rounded-xl bg-teal-500/10 text-teal-600 dark:text-teal-400">
+            <div className="p-2 rounded-xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
               <FileSpreadsheet className="w-5 h-5" />
             </div>
             <div>
@@ -230,7 +230,7 @@ export function ImportModal({
               onDragOver={(e) => e.preventDefault()}
               onDrop={handleDrop}
               onClick={() => fileInputRef.current?.click()}
-              className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl p-8 sm:p-12 text-center cursor-pointer hover:border-teal-500/60 transition-colors bg-zinc-50/50 dark:bg-zinc-900/40"
+              className="border-2 border-dashed border-zinc-300 dark:border-zinc-700 rounded-2xl p-8 sm:p-12 text-center cursor-pointer hover:border-indigo-500/60 transition-colors bg-zinc-50/50 dark:bg-zinc-900/40"
             >
               <input
                 ref={fileInputRef}
@@ -263,7 +263,7 @@ export function ImportModal({
                     type="checkbox"
                     checked={hasHeader}
                     onChange={(e) => setHasHeader(e.target.checked)}
-                    className="rounded text-teal-600"
+                    className="rounded text-indigo-600"
                   />
                   <span>Dòng đầu tiên là tiêu đề cột</span>
                 </label>
@@ -387,9 +387,9 @@ export function ImportModal({
           {/* STEP 3: Validate & Preview */}
           {step === "validate" && (
             <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-teal-50 dark:bg-teal-950/30 border border-teal-200 dark:border-teal-800/50 flex items-center justify-between">
-                <div className="flex items-center gap-2 text-teal-800 dark:text-teal-200 text-sm font-bold">
-                  <CheckCircle2 className="w-5 h-5 text-teal-600 dark:text-teal-400" />
+              <div className="p-4 rounded-xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200 dark:border-indigo-800/50 flex items-center justify-between">
+                <div className="flex items-center gap-2 text-indigo-800 dark:text-indigo-200 text-sm font-bold">
+                  <CheckCircle2 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
                   <span>Sẵn sàng nhập {validatedCards.length} thẻ từ vựng hợp lệ</span>
                 </div>
               </div>
@@ -420,7 +420,7 @@ export function ImportModal({
               </p>
               <div className="w-full h-3 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
                 <div
-                  className="h-full bg-gradient-to-r from-teal-500 to-emerald-400 rounded-full transition-all duration-300"
+                  className="h-full bg-gradient-to-r from-indigo-500 to-emerald-400 rounded-full transition-all duration-300"
                   style={{
                     width: `${
                       uploadProgress.totalChunks > 0

@@ -52,7 +52,7 @@ function ForgotPasswordForm() {
   return (
     <Card className="space-y-6">
       <div className="text-center space-y-2">
-        <div className="w-12 h-12 mx-auto rounded-2xl bg-teal-500/10 text-teal-600 dark:text-teal-400 flex items-center justify-center">
+        <div className="w-12 h-12 mx-auto rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
           <KeyRound className="w-6 h-6" />
         </div>
         <h1 className="text-2xl font-extrabold text-zinc-950 dark:text-zinc-50 tracking-tight">

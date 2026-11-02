@@ -10,7 +10,7 @@ test('splits semicolons while preserving quoted bodies, escaped strings and nest
 test('retains every real migration and its individual replay statements',()=>{
   const migrations=readMigrations(fileURLToPath(new URL('../',import.meta.url)));
   assert.deepEqual(migrations.slice(0,5).map(m=>m.statements.length),[9,23,21,17,7]);
-  assert.equal(migrations.at(-1).version,'20261027000006');
+  assert.equal(migrations.at(-1).version,'20261102000007');
   const bundle=renderBundle(migrations);
   assert.match(bundle,/BEGIN;/); assert.match(bundle,/COMMIT;/); assert.match(bundle,/supabase_migrations.schema_migrations/);
   for(const migration of migrations) assert.ok(bundle.includes(migration.version));

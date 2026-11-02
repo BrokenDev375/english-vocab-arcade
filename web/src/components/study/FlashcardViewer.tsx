@@ -145,7 +145,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
   if (!persistence.ready) return <><SyncNotice message={persistence.error} ready={false} retry={persistence.retry} /><p>Đang khôi phục bộ thẻ...</p></>;
   if (rememberedCount + forgotCount >= cards.length) return <div className="space-y-4"><SyncNotice message={persistence.error} ready retry={persistence.retry} /><p>Đã ôn {cards.length} thẻ.</p><Button onClick={() => { void persistence.restart(() => { setCurrentIndex(0); setRememberedCount(0); setForgotCount(0); setRatedIds([]); setIsFlipped(false); }); }}>Ôn lại</Button></div>;
   return (
-    <div className="max-w-2xl mx-auto space-y-6">
+    <div className="w-full mx-auto space-y-6">
       <SyncNotice message={persistence.error} ready={persistence.ready} retry={persistence.retry} />
       {/* Top Controls & Counter */}
       <div className="flex items-center justify-between text-xs font-semibold text-zinc-500">
@@ -172,7 +172,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
       {/* Progress Bar */}
       <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
         <div
-          className="h-full bg-teal-500 rounded-full transition-all duration-300"
+          className="h-full bg-indigo-500 rounded-full transition-all duration-300"
           style={{ width: `${((currentIndex + 1) / cards.length) * 100}%` }}
         />
       </div>
@@ -201,7 +201,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
               <button
                 type="button"
                 onClick={handleSpeech}
-                className="p-2.5 rounded-full bg-zinc-100 hover:bg-teal-100 dark:bg-zinc-800 dark:hover:bg-teal-950/60 text-zinc-700 dark:text-zinc-200 hover:text-teal-600 transition-colors"
+                className="p-2.5 rounded-full bg-zinc-100 hover:bg-indigo-100 dark:bg-zinc-800 dark:hover:bg-indigo-950/60 text-zinc-700 dark:text-zinc-200 hover:text-indigo-600 transition-colors"
                 title="Nghe phát âm (Voice)"
               >
                 <Volume2 className="w-5 h-5" />
@@ -227,7 +227,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
 
           {/* BACK */}
           <Card
-            className="absolute inset-0 p-8 flex flex-col justify-between [transform:rotateY(180deg)] [backface-visibility:hidden] border-2 border-teal-500/40 shadow-xl bg-gradient-to-b from-teal-50/20 via-white to-zinc-50 dark:from-teal-950/20 dark:via-zinc-900 dark:to-zinc-900 rounded-3xl"
+            className="absolute inset-0 p-8 flex flex-col justify-between [transform:rotateY(180deg)] [backface-visibility:hidden] border-2 border-indigo-500/40 shadow-xl bg-gradient-to-b from-indigo-50/20 via-white to-zinc-50 dark:from-indigo-950/20 dark:via-zinc-900 dark:to-zinc-900 rounded-3xl"
           >
             <div className="flex items-center justify-between">
               <Badge variant="zinc" size="sm">
@@ -236,14 +236,14 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
               <button
                 type="button"
                 onClick={handleSpeech}
-                className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-teal-600"
+                className="p-2 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-indigo-600"
               >
                 <Volume2 className="w-4 h-4" />
               </button>
             </div>
 
             <div className="text-center space-y-4">
-              <h3 className="text-2xl sm:text-3xl font-extrabold text-teal-700 dark:text-teal-400 leading-snug">
+              <h3 className="text-2xl sm:text-3xl font-extrabold text-indigo-700 dark:text-indigo-400 leading-snug">
                 {currentCard.meaningVi}
               </h3>
 
@@ -268,7 +268,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
       </div>
 
       {/* Bottom Action Controls */}
-      <div className="flex items-center justify-between gap-3 pt-2">
+      <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
         <Button
           type="button"
           variant="outline"
@@ -280,7 +280,7 @@ export function FlashcardViewer({ cards: initialCards, setId }: FlashcardViewerP
           <span>Trước</span>
         </Button>
 
-        <div className="flex items-center gap-2">
+        <div className="order-first flex w-full items-center justify-center gap-2 sm:order-none sm:w-auto">
           <Button
             type="button"
             variant="danger"

@@ -117,7 +117,7 @@ export function QuestionCard({
       {/* Progress Bar */}
       <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
         <div
-          className="h-full bg-teal-500 rounded-full transition-all duration-300"
+          className="h-full bg-indigo-500 rounded-full transition-all duration-300"
           style={{ width: `${(questionNumber / totalQuestions) * 100}%` }}
         />
       </div>
@@ -125,7 +125,7 @@ export function QuestionCard({
       {/* Question Main Card */}
       <Card className="p-6 sm:p-8 space-y-6 shadow-xl border-2 border-zinc-200 dark:border-zinc-800 rounded-3xl">
         <div className="text-center space-y-2">
-          <p className="text-xs uppercase font-bold tracking-wider text-teal-600 dark:text-teal-400">
+          <p className="text-xs uppercase font-bold tracking-wider text-indigo-600 dark:text-indigo-400">
             Nghĩa tiếng Việt
           </p>
           <h2 className="text-2xl sm:text-3xl font-extrabold text-zinc-950 dark:text-zinc-50">
@@ -142,7 +142,7 @@ export function QuestionCard({
         {question.type === "multiple_choice" && question.options && (
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
             {question.options.map((opt) => {
-              let btnClass = "border border-zinc-200 dark:border-zinc-700 hover:border-teal-500 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100";
+              let btnClass = "border border-zinc-200 dark:border-zinc-700 hover:border-indigo-500 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100";
 
               if (isSubmitted) {
                 if (opt.isCorrect) {
@@ -186,7 +186,7 @@ export function QuestionCard({
                 placeholder="Gõ từ tiếng Anh tương ứng..."
                 value={typeInAnswer}
                 onChange={(e) => setTypeInAnswer(e.target.value)}
-                className="w-full text-center text-xl font-bold rounded-2xl border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3.5 focus-visible:outline-none focus-visible:border-teal-500"
+                className="w-full text-center text-xl font-bold rounded-2xl border-2 border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-900 px-4 py-3.5 focus-visible:outline-none focus-visible:border-indigo-500"
               />
             </div>
 
@@ -203,12 +203,12 @@ export function QuestionCard({
         {question.type === "scramble" && (
           <div className="space-y-4 pt-2">
             {/* Answer Box */}
-            <div className="min-h-16 p-4 rounded-2xl border-2 border-dashed border-teal-500/40 bg-teal-50/20 dark:bg-teal-950/20 flex flex-wrap items-center justify-center gap-2">
+            <div className="min-h-16 p-4 rounded-2xl border-2 border-dashed border-indigo-500/40 bg-indigo-50/20 dark:bg-indigo-950/20 flex flex-wrap items-center justify-center gap-2">
               {scrambleAnswer.length > 0 ? (
                 scrambleAnswer.map((tok, i) => (
                   <span
                     key={i}
-                    className="px-3 py-1.5 rounded-xl bg-teal-600 text-white font-bold text-lg shadow-sm"
+                    className="px-3 py-1.5 rounded-xl bg-indigo-600 text-white font-bold text-lg shadow-sm"
                   >
                     {tok}
                   </span>
@@ -226,7 +226,7 @@ export function QuestionCard({
                   type="button"
                   disabled={isSubmitted}
                   onClick={() => handleScrambleTokenClick(tok, i)}
-                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-teal-100 dark:hover:bg-teal-900 font-black text-lg text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition-colors cursor-pointer shadow-sm"
+                  className="w-10 h-10 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-indigo-100 dark:hover:bg-indigo-900 font-black text-lg text-zinc-900 dark:text-zinc-100 flex items-center justify-center transition-colors cursor-pointer shadow-sm"
                 >
                   {tok}
                 </button>

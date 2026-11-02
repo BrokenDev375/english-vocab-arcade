@@ -9,7 +9,7 @@ BEGIN;
 DO $eva_preflight$
 DECLARE
   applied text[] := ARRAY[]::text[];
-  expected text[] := ARRAY['20261026000001','20261026000002','20261026000003','20261026000004','20261027000005','20261027000006']::text[];
+  expected text[] := ARRAY['20261026000001','20261026000002','20261026000003','20261026000004','20261027000005','20261027000006','20261102000007']::text[];
   app_count integer; other_count integer; required_count integer;
 BEGIN
   IF to_regclass('auth.users') IS NULL THEN RAISE EXCEPTION 'Supabase auth.users is missing. Use the correct hosted Supabase project.'; END IF;
@@ -2513,6 +2513,32 @@ $eva_history_5_21$GRANT EXECUTE ON FUNCTION public.save_session_state_v1(uuid,in
 $eva_history_5_22$NOTIFY pgrst, 'reload schema';$eva_history_5_22$]::text[]);
   END IF;
 END;$eva_apply_5$;
+
+-- 20261102000007_dialogue_mode.sql
+DO $eva_apply_6$BEGIN
+  IF NOT EXISTS(SELECT 1 FROM supabase_migrations.schema_migrations WHERE version='20261102000007') THEN
+    EXECUTE $eva_statement_6_0$-- Add English dialogue without changing existing sessions, attempts, or cache entries.
+SET search_path = '';$eva_statement_6_0$;
+    EXECUTE $eva_statement_6_1$ALTER TABLE public.study_sessions DROP CONSTRAINT study_sessions_mode_check;$eva_statement_6_1$;
+    EXECUTE $eva_statement_6_2$ALTER TABLE public.study_sessions ADD CONSTRAINT study_sessions_mode_check CHECK (mode IN (
+  'flashcard', 'learn', 'test', 'match', 'arcade_typing', 'arcade_recall',
+  'dictation', 'speak', 'grammar', 'reading', 'translate', 'dialogue'
+));$eva_statement_6_2$;
+    EXECUTE $eva_statement_6_3$ALTER TABLE public.ai_batches DROP CONSTRAINT ai_batches_mode_check;$eva_statement_6_3$;
+    EXECUTE $eva_statement_6_4$ALTER TABLE public.ai_batches ADD CONSTRAINT ai_batches_mode_check CHECK (mode IN ('context', 'grammar', 'reading', 'translation', 'dialogue'));$eva_statement_6_4$;
+    EXECUTE $eva_statement_6_5$NOTIFY pgrst, 'reload schema';$eva_statement_6_5$;
+    INSERT INTO supabase_migrations.schema_migrations(version,name,statements) VALUES('20261102000007','dialogue_mode',ARRAY[$eva_history_6_0$-- Add English dialogue without changing existing sessions, attempts, or cache entries.
+SET search_path = '';$eva_history_6_0$,
+$eva_history_6_1$ALTER TABLE public.study_sessions DROP CONSTRAINT study_sessions_mode_check;$eva_history_6_1$,
+$eva_history_6_2$ALTER TABLE public.study_sessions ADD CONSTRAINT study_sessions_mode_check CHECK (mode IN (
+  'flashcard', 'learn', 'test', 'match', 'arcade_typing', 'arcade_recall',
+  'dictation', 'speak', 'grammar', 'reading', 'translate', 'dialogue'
+));$eva_history_6_2$,
+$eva_history_6_3$ALTER TABLE public.ai_batches DROP CONSTRAINT ai_batches_mode_check;$eva_history_6_3$,
+$eva_history_6_4$ALTER TABLE public.ai_batches ADD CONSTRAINT ai_batches_mode_check CHECK (mode IN ('context', 'grammar', 'reading', 'translation', 'dialogue'));$eva_history_6_4$,
+$eva_history_6_5$NOTIFY pgrst, 'reload schema';$eva_history_6_5$]::text[]);
+  END IF;
+END;$eva_apply_6$;
 
 NOTIFY pgrst, 'reload schema';
 COMMIT;

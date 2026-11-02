@@ -7,11 +7,11 @@ import type { TargetCardInfo } from "@/features/ai/service.server";
 
 const CreateAiBatchSchema = z.object({
   setId: z.string().uuid(),
-  mode: z.enum(["context", "grammar", "reading", "translation"]),
+  mode: z.enum(["context", "grammar", "reading", "translation", "dialogue"]),
   cardIds: z.array(z.string().uuid()).min(1).max(10),
   targetLevel: z.enum(["A1", "A2", "B1"]).optional(),
   nonce: z.number().int().nonnegative().optional(),
-});
+}).refine(value => value.mode !== "dialogue" || value.cardIds.length <= 6, { message: "Mỗi hội thoại sử dụng tối đa 6 từ.", path: ["cardIds"] });
 
 export async function POST(request: Request) {
   try {
