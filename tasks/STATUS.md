@@ -9,7 +9,7 @@ Cập nhật ban đầu: 26/10/2026.
 ## Hiện trạng đã xác minh — cập nhật 02/11/2026
 
 - Đang triển khai yêu cầu đưa giao diện và luồng học tiếng Anh về gần bản Quizlet clone gốc, giữ backend tiếng Anh và Word Blaster. Bổ sung Hội thoại A/B; xem [báo cáo](../reports/quizlet-parity-20261102.md).
-- Bản giao diện mới: lint, TypeScript, 119 unit, production build PASS; 7 kiểm tra Edge desktop/mobile với guest mock và dữ liệu demo PASS. Kiểm thử database/tài khoản chuyển sang CI vì chủ máy đã đóng Docker sau thông báo WSL. Chưa ghi nhận full integration/E2E của bản mới là PASS.
+- Bản giao diện mới ecd179f đã push/deploy: lint, TypeScript, 119 unit, production build PASS; 7 kiểm tra Edge local và 7 kiểm tra live guest/demo PASS. CI đầu tiên: integration/build PASS, 19/20 E2E PASS; lỗi selector đếm DOM ẩn đã tái hiện và sửa, chờ CI chạy lại. Docker được giữ đóng theo trao đổi với chủ máy.
 - Chủ dự án đã chạy SQL sáu migrations; kiểm tra production ngày 30/10/2026: health 200 build 053982f, sets explore 200 (0 học phần public), auth/user 200. 0007 cho Hội thoại chưa áp dụng production; các migrations cũ giữ nguyên.
 
 - [x] Kế hoạch, đặc tả và runbook bàn giao.
@@ -47,24 +47,24 @@ Các log phía dưới là lịch sử. Kiểm thử local không thay thế cá
 | T16 | DONE | English exercises (grammar unscramble, reading comprehension, contextual translation), zero HSK/pinyin, acceptedTokenOrders & reference matching; 4 unit tests + 34 routes compiled |
 | T17 | DONE | Speech adapter (TTS 1.0x/0.75x, Web Speech STT, token grading, substring rejection, keyboard fallback), /dictation and /speak routes; 6 unit tests + 36 routes compiled |
 | T18 | UNVERIFIED | 32 cards for internal smoke tests only; public beta requires >=300 cards and independent content review. Metadata/hash tests do not verify linguistic accuracy. |
-| T19 | DOING | Bản UI mới local: 119 unit, lint/typecheck/build, 7 demo browser checks PASS. Full integration và 20 E2E được thêm vào CI; chờ chạy sau push. |
+| T19 | DOING | CI ecd179f: lint/typecheck/119 unit/integration/build PASS; 19/20 E2E PASS. Ca tìm kiếm đếm DOM ẩn; selector accessible đã sửa, chờ CI chạy lại. 7 live guest/demo browser checks PASS. |
 | T20 | DOING | Bộ SQL 0001–0006 đã chạy trên production theo chủ dự án, API sets 200. Bộ gộp cập nhật thêm 0007 cho Hội thoại; chờ áp dụng production, không reset hay sửa migration cũ. |
-| T21 | DOING | Production 053982f health 200. UI parity và Hội thoại mới đang kiểm tra trước push/deploy; Auth/AI provider thật cần smoke riêng. |
-| T22 | DOING | Ngày 30/10: health 200, auth/user 200, sets explore 200. Chờ smoke deployment UI mới và mode Hội thoại sau migration 0007. |
+| T21 | DOING | ecd179f đã push main, Vercel Ready, health 200 đúng SHA; giao diện mới và Hội thoại demo đã smoke thật. Hội thoại với DB cần 0007; provider thật cần smoke riêng. |
+| T22 | DOING | UI ecd179f: health/sets/auth-user 200, 7 smoke guest/demo thật PASS. Chờ Hội thoại với DB sau migration 0007 và provider thật. |
 
 Status hợp lệ: TODO, DOING, DONE, BLOCKED, UNVERIFIED.
 Chỉ đổi DONE khi ticket có evidence theo docs/09. BLOCKED phải ghi điều kiện thiếu và việc độc lập còn làm được.
 
 ## Thông tin triển khai
 
-- Source deployed xác minh 30/10: 053982f8b77349e6e749475df4bdc76a747146bb; UI parity/migration 0007 là lượt bổ sung hiện tại.
+- Source deployed xác minh 02/11: ecd179f8a81cce6051613ed62a7a661c8856f5ed; migration 0007 chưa áp dụng production.
 - GitHub repository: https://github.com/BrokenDev375/english-vocab-arcade
 - Supabase project ref: qtqvytchmlqojolkobmw (Local stack: 127.0.0.1:54321)
 - Supabase production URL: https://qtqvytchmlqojolkobmw.supabase.co
 - Vercel project/team: thanh-djts-projects/english-vocab-arcade (Root: web)
 - Production stable URL: https://english-vocab-arcade.vercel.app
-- Deployment commit/build SHA đã kiểm tra: 053982f8b77349e6e749475df4bdc76a747146bb (health 200)
-- Last production smoke: 30/10/2026, chỉ read-only; sets explore 200, auth/user 200.
+- Deployment commit/build SHA đã kiểm tra: ecd179f8a81cce6051613ed62a7a661c8856f5ed (health 200)
+- Last production smoke: 02/11/2026; sets explore/auth-user/health 200, 7 browser checks guest/demo PASS; không viết DB production.
 - Gemini provider thật trên production: UNVERIFIED. Fallback chỉ dùng khi cấu hình rõ; báo cáo provider cũ không chứng minh provider hoạt động ở deployment hiện tại.
 - Dataset internal/smoke count: 32 thẻ; kiểm duyệt ngôn ngữ độc lập và bộ public beta >=300 thẻ chưa xác minh.
 

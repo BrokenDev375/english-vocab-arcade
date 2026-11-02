@@ -225,9 +225,10 @@ test("navbar search reaches all public results across pages without creator deta
       url.searchParams.get("q") === `${prefix} public`,
   );
   await expect(page.getByText("13 học phần", { exact: true })).toBeVisible();
-  await expect(page.locator("main h3")).toHaveCount(12);
+  // Next preserves inactive routes in hidden DOM; assert the current accessible page.
+  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(12);
   await page.getByRole("button", { name: "Sau", exact: true }).click();
-  await expect(page.locator("main h3")).toHaveCount(1);
+  await expect(page.getByRole("heading", { level: 3 })).toHaveCount(1);
   await expect(page.getByText(emails[0], { exact: true })).toHaveCount(0);
   await page.getByRole("combobox", { name: "Trình độ" }).selectOption("B1");
   await expect(
